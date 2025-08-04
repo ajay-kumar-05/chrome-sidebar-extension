@@ -49,17 +49,17 @@ class AISidebar {
                 
                 <div class="input-section">
                     <div class="file-actions">
-                                <button id="fullScreenshotBtn" class="screenshot-btn full-screenshot">
-          📷 Full Screenshot
-        </button>
-        <button id="regionScreenshotBtn" class="screenshot-btn region-screenshot">
-          ✂️ Select Area
-        </button>
-                        <button class="file-btn" id="upload-btn" title="Upload File">📎</button>
-                        <input type="file" id="file-input" style="display: none" multiple accept="image/*,.pdf,.doc,.docx,.txt">
-                        <div class="selected-files" id="selected-files"></div>
-                    </div>
-                    <div class="input-group">
+                    <button id="regionScreenshotBtn" class="screenshot-btn region-screenshot">
+                    ✂️ Screenshot
+                    </button>
+                    <button class="file-btn" id="upload-btn" title="Upload File">📎</button>
+                    <input type="file" id="file-input" style="display: none" multiple accept="image/*,.pdf,.doc,.docx,.txt">
+                        
+                </div>
+
+                <div class="selected-files" id="selected-files"></div>
+
+                <div class="input-group">
                         <textarea 
                             class="input" 
                             id="message-input" 
@@ -74,11 +74,10 @@ class AISidebar {
                         >
                             ${this.isLoading ? '<span class="loading"><span></span><span></span><span></span></span>' : 'Send'}
                         </button>
-                    </div>
                 </div>
             </div>
-        `;
-    }
+        </div>
+    `; }
 
     renderMessages() {
         if (this.messages.length === 0) {
@@ -164,12 +163,6 @@ class AISidebar {
         }
 
         // Screenshot functionality
-        // Screenshot button event listeners
-        const fullScreenshotBtn = document.getElementById('fullScreenshotBtn');
-        if (fullScreenshotBtn) {
-            fullScreenshotBtn.addEventListener('click', () => this.takeScreenshot('full'));
-        }
-
         const regionScreenshotBtn = document.getElementById('regionScreenshotBtn');
         if (regionScreenshotBtn) {
             regionScreenshotBtn.addEventListener('click', () => this.takeScreenshot('region'));
