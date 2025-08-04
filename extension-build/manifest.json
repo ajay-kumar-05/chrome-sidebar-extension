@@ -8,9 +8,13 @@
     "storage",
     "sidePanel",
     "contextMenus",
-    "scripting"
+    "scripting",
+    "tabs",
+    "tabCapture",
+    "permissions"
   ],
   "host_permissions": [
+    "<all_urls>",
     "http://*/*",
     "https://*/*",
     "https://api.openai.com/*"

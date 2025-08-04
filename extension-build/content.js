@@ -9,6 +9,20 @@
   function init() {
     console.log('AI Sidebar content script loaded');
     
+    // Check if extension context is valid
+    try {
+      if (typeof chrome === 'undefined' || !chrome.runtime) {
+        console.warn('Chrome runtime not available, skipping content script initialization');
+        return;
+      }
+      
+      // Test if we can access the extension context
+      chrome.runtime.getManifest();
+    } catch (error) {
+      console.warn('Extension context invalid, skipping content script initialization:', error);
+      return;
+    }
+    
     // Add selection listener
     document.addEventListener('mouseup', handleTextSelection);
     document.addEventListener('keyup', handleTextSelection);
@@ -25,17 +39,32 @@
     const selection = window.getSelection();
     const newSelectedText = selection.toString().trim();
     
-    if (newSelectedText && newSelectedText !== selectedText) {
+    if (newSelectedText && newSelectedText !== selectedText && newSelectedText.length > 2) {
       selectedText = newSelectedText;
       
-      // Send selected text to background script
-      chrome.runtime.sendMessage({
-        action: 'setSelectedText',
-        text: selectedText,
-      });
-      
-      // Show selection popup
-      showSelectionPopup(selection);
+      // Send selected text to background script immediately
+      try {
+        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+          console.warn('Extension context not available for text selection');
+          return;
+        }
+        
+        chrome.runtime.sendMessage({
+          action: 'setSelectedText',
+          text: selectedText,
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn('Failed to send selected text:', chrome.runtime.lastError);
+          } else {
+            console.log('✅ Selected text sent to sidebar:', selectedText.substring(0, 50) + '...');
+          }
+        });
+        
+        // Also show selection popup for quick actions
+        showSelectionPopup(selection);
+      } catch (error) {
+        console.warn('Extension context error during text selection:', error);
+      }
     } else if (!newSelectedText) {
       selectedText = '';
       hideSelectionPopup();
@@ -80,12 +109,13 @@
     // Styles for floating button
     Object.assign(button.style, {
       position: 'fixed',
+      top: 'auto',
       bottom: '80px',
       right: '0px',
-      width: '45px',
-      height: '40px',
+      width: '40px',
+      height: '35px',
       borderRadius: '50% 0 0 50%',
-      backgroundColor: '#3b82f6',
+      backgroundColor: '#9d00e0ff',
       color: 'white',
       display: 'flex',
       alignItems: 'center',
@@ -110,7 +140,24 @@
     
     // Click handler
     button.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ action: 'openSidePanel' });
+      try {
+        // Check if chrome runtime is available
+        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+          console.warn('Extension context not available, page needs refresh');
+          showExtensionReloadNotice();
+          return;
+        }
+        
+        chrome.runtime.sendMessage({ action: 'openSidePanel' }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('Extension context error:', chrome.runtime.lastError);
+            showExtensionReloadNotice();
+          }
+        });
+      } catch (error) {
+        console.error('Extension context invalidated:', error);
+        showExtensionReloadNotice();
+      }
     });
     
     document.body.appendChild(button);
@@ -228,19 +275,122 @@
   function handleSelectionAction(action) {
     if (!selectedText) return;
     
-    // Open sidebar and send action
-    chrome.runtime.sendMessage({
-      action: 'openSidePanel',
+    try {
+      // Check if chrome runtime is available
+      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+        console.warn('Extension context not available for selection action');
+        showExtensionReloadNotice();
+        return;
+      }
+      
+      // Open sidebar and send action
+      chrome.runtime.sendMessage({
+        action: 'openSidePanel',
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Failed to open side panel:', chrome.runtime.lastError);
+          showExtensionReloadNotice();
+          return;
+        }
+        
+        // Send the specific action to background script
+        setTimeout(() => {
+          chrome.runtime.sendMessage({
+            action: action,
+            text: selectedText,
+            pageUrl: window.location.href,
+          }, (response) => {
+            if (chrome.runtime.lastError) {
+              console.warn('Failed to send action:', chrome.runtime.lastError);
+            }
+          });
+        }, 500);
+      });
+    } catch (error) {
+      console.error('Extension context error during selection action:', error);
+      showExtensionReloadNotice();
+    }
+  }
+  
+  // Show extension reload notice
+  function showExtensionReloadNotice() {
+    // Remove any existing notice
+    const existingNotice = document.getElementById('ai-extension-reload-notice');
+    if (existingNotice) existingNotice.remove();
+    
+    const notice = document.createElement('div');
+    notice.id = 'ai-extension-reload-notice';
+    notice.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #fee2e2;
+      border: 2px solid #fca5a5;
+      color: #dc2626;
+      padding: 16px 20px;
+      border-radius: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      z-index: 100000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      max-width: 300px;
+      animation: slideIn 0.3s ease;
+    `;
+    
+    notice.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <span style="font-size: 18px;">⚠️</span>
+        <strong>Extension Context Lost</strong>
+      </div>
+      <div style="margin-bottom: 12px; font-size: 13px;">
+        The extension was reloaded. Please refresh this page to restore functionality.
+      </div>
+      <button id="reload-page-btn" style="
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-right: 8px;
+      ">Refresh Page</button>
+      <button id="dismiss-notice-btn" style="
+        background: transparent;
+        color: #dc2626;
+        border: 1px solid #dc2626;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      ">Dismiss</button>
+    `;
+    
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Add event listeners
+    notice.querySelector('#reload-page-btn').addEventListener('click', () => {
+      window.location.reload();
     });
     
-    // Send the specific action to background script
+    notice.querySelector('#dismiss-notice-btn').addEventListener('click', () => {
+      notice.remove();
+    });
+    
+    document.body.appendChild(notice);
+    
+    // Auto-dismiss after 10 seconds
     setTimeout(() => {
-      chrome.runtime.sendMessage({
-        action: action,
-        text: selectedText,
-        pageUrl: window.location.href,
-      });
-    }, 500);
+      if (notice.parentNode) notice.remove();
+    }, 10000);
   }
 
   // Scroll to specific text

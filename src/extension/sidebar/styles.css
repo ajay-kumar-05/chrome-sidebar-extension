@@ -1,3 +1,4 @@
+
 * {
     margin: 0;
     padding: 0;
@@ -217,15 +218,133 @@ body {
     border-bottom-left-radius: 4px;
 }
 
+.message-files {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.message-file {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
 .input-section {
     padding: 16px;
     border-top: 1px solid #e5e7eb;
     background: #ffffff;
 }
 
+.file-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.file-btn {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #f9fafb;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.file-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.screenshot-btn {
+    padding: 8px 12px;
+    margin: 0 4px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.screenshot-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.screenshot-btn:active {
+    transform: translateY(0);
+}
+
+.full-screenshot {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.region-screenshot {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.selected-files {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.selected-file {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.file-name {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.remove-file {
+    background: none;
+    border: none;
+    color: #1e40af;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remove-file:hover {
+    background: rgba(30, 64, 175, 0.1);
+    border-radius: 50%;
+}
+
 .input-group {
     display: flex;
     gap: 8px;
+    align-items: flex-end;
 }
 
 .input {
@@ -236,6 +355,11 @@ body {
     font-size: 14px;
     outline: none;
     transition: border-color 0.2s;
+    resize: none;
+    min-height: 20px;
+    max-height: 120px;
+    overflow-y: auto;
+    font-family: inherit;
 }
 
 .input:focus {
