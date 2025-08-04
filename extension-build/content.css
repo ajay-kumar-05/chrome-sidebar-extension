@@ -1,11 +1,52 @@
 /* Content script styles */
 #ai-sidebar-float-btn {
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  z-index: 10000;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+#ai-sidebar-float-btn:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
+
 #ai-sidebar-selection-popup {
+  position: absolute;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  z-index: 10001;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   animation: fadeIn 0.2s ease-out;
+}
+
+#ai-sidebar-selection-popup button {
+  background: #f3f4f6;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 2px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#ai-sidebar-selection-popup button:hover {
+  background: #e5e7eb;
 }
 
 @keyframes fadeIn {

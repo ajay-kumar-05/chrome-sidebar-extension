@@ -80,11 +80,11 @@
     // Styles for floating button
     Object.assign(button.style, {
       position: 'fixed',
-      top: '20px',
-      right: '20px',
-      width: '56px',
-      height: '56px',
-      borderRadius: '50%',
+      bottom: '80px',
+      right: '0px',
+      width: '45px',
+      height: '40px',
+      borderRadius: '50% 0 0 50%',
       backgroundColor: '#3b82f6',
       color: 'white',
       display: 'flex',

@@ -42,7 +42,7 @@ class AISidebar {
                             type="password" 
                             class="setup-input" 
                             id="api-key-input"
-                            placeholder="Secret Key"
+                            placeholder="sk-..."
                         >
                         <button class="setup-btn" id="save-api-key">
                             Save API Key
