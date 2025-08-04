@@ -201,7 +201,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter any issues or have questions:
 
-1. Check the [Issues](https://github.com/your-username/chrome-sidebar-extension/issues) page
+1. Check the [Issues](https://github.com/ajay-kumar-05/chrome-sidebar-extension/issues) page
 2. Create a new issue with detailed description
 3. Include your Chrome version and extension version
 
