@@ -1,4 +1,4 @@
-# AI Sidebar Extension - Sider.ai Clone
+# AI Sidebar Extension - Like Sider.ai
 
 A powerful Chrome sidebar extension built with Next.js and TypeScript that provides AI-powered assistance for web browsing, similar to Sider.ai.
 
@@ -45,7 +45,7 @@ NEXT_PUBLIC_OPENAI_API_KEY=your_openai_api_key_here
 
 ### 3. Development
 
-For development with hot reload:
+For development with hot reload and auto-extension rebuild:
 
 ```bash
 npm run dev:extension
@@ -61,7 +61,15 @@ npm run build
 
 This creates a production build and packages the Chrome extension.
 
-### 5. Install in Chrome
+### 5. Verify Extension
+
+```bash
+node scripts/verify-extension.js
+```
+
+This checks that all required files are present and valid.
+
+### 6. Install in Chrome
 
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable "Developer mode" (toggle in top right)
@@ -146,14 +154,23 @@ The sidebar width can be adjusted and the preference is saved automatically.
 │   │   └── index.ts       # Zustand stores
 │   ├── extension/         # Chrome extension scripts
 │   │   ├── background.js  # Background service worker
-│   │   └── content.js     # Content script
+│   │   ├── content.js     # Content script
+│   │   ├── content.css    # Content styles
+│   │   ├── manifest.template.json # Manifest template
+│   │   └── sidebar/       # Sidebar specific files
+│   │       ├── index.html # Sidebar HTML
+│   │       ├── sidebar.js # Sidebar JavaScript
+│   │       └── styles.css # Sidebar styles
 │   └── pages/             # Next.js pages
 ├── public/
-│   ├── manifest.json      # Extension manifest
-│   └── icons/            # Extension icons
+│   ├── manifest.json      # Extension manifest template
+│   └── icons/            # Extension icons (SVG source)
 ├── scripts/
-│   └── build-extension.js # Build script
+│   ├── build-extension.js # Main build script
+│   ├── create-icons.js   # Icon generator (SVG to PNG)
+│   └── verify-extension.js # Extension verification
 └── extension-build/       # Built extension (created after build)
+    └── icons/            # Generated PNG icons
 ```
 
 ## 🚀 Development Roadmap
@@ -212,7 +229,27 @@ To update the extension:
 1. Pull the latest changes: `git pull origin main`
 2. Install new dependencies: `npm install`
 3. Rebuild the extension: `npm run build`
-4. Reload the extension in Chrome extensions page
+4. Verify the build: `node scripts/verify-extension.js`
+5. Reload the extension in Chrome extensions page
+
+### Development Commands
+
+```bash
+# Start development with auto-rebuild
+npm run dev:extension
+
+# Build production version
+npm run build
+
+# Build extension only
+npm run build:extension
+
+# Verify extension build
+node scripts/verify-extension.js
+
+# Generate icons from SVG
+node scripts/create-icons.js
+```
 
 ---
 

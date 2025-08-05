@@ -31,25 +31,60 @@ You have successfully created a **Chrome Sidebar Extension** similar to Sider.ai
 │   │   └── index.ts       # Chat & UI stores
 │   ├── extension/         # Chrome extension scripts
 │   │   ├── background.js  # Background service worker
-│   │   └── content.js     # Content script
+│   │   ├── content.js     # Content script
+│   │   ├── content.css    # Content styles
+│   │   ├── manifest.template.json # Manifest template
+│   │   └── sidebar/       # Sidebar specific files
+│   │       ├── index.html # Sidebar HTML
+│   │       ├── sidebar.js # Sidebar JavaScript
+│   │       └── styles.css # Sidebar styles
 │   └── pages/             # Next.js pages
 ├── public/
 │   ├── manifest.json      # Extension manifest
-│   └── icons/            # Extension icons (SVG)
+│   └── icons/            # Extension icons (SVG source)
 ├── scripts/
-│   ├── build-extension.js # Build script
-│   └── create-icons.js   # Icon generator
+│   ├── build-extension.js # Main build script
+│   ├── create-icons.js   # Icon generator (SVG to PNG)
+│   └── verify-extension.js # Extension verification
 └── extension-build/       # Built extension (ready for Chrome)
+    ├── manifest.json      # Final manifest
+    ├── index.html         # Sidebar HTML
+    ├── background.js      # Background service worker
+    ├── content.js         # Content script
+    ├── content.css        # Content styles
+    ├── sidebar.js         # Sidebar JavaScript
+    └── icons/            # Generated PNG icons
+        ├── icon16.png
+        ├── icon32.png
+        ├── icon48.png
+        └── icon128.png
 ```
 
 ## 🚀 Installation Steps
+
+### 0. Install Project Dependencies
+
+**First, you need to install all project dependencies:**
+
+```bash
+# Navigate to project directory
+cd path/to/chrome-sidebar-extension
+
+# Install all dependencies
+npm install
+```
+
+**If you encounter peer dependency warnings, you can use:**
+```bash
+npm install --legacy-peer-deps
+```
 
 ### 1. Install the Extension in Chrome
 
 1. **Open Chrome** and navigate to `chrome://extensions/`
 2. **Enable "Developer mode"** (toggle in top right corner)
 3. **Click "Load unpacked"**
-4. **Select the folder**: `c:\Users\ajay.kumar05\Desktop\Projects\Nextjs\chrome-sidebar-extension\extension-build`
+4. **Select the folder**: Navigate to your project directory and select the `extension-build` folder
 5. **The extension should now appear** in your extensions list with a blue AI icon
 
 ### 2. Get OpenAI API Key
@@ -95,20 +130,46 @@ You have successfully created a **Chrome Sidebar Extension** similar to Sider.ai
 
 ```bash
 # Install dependencies
-npm install --legacy-peer-deps
+npm install
 
-# Development mode
+# Development mode (Next.js only)
 npm run dev
+
+# Development with extension auto-rebuild
+npm run dev:extension
 
 # Build for production
 npm run build
 
 # Build extension only
-node scripts/build-extension.js
+npm run build:extension
 
-# Create new icons
+# Verify extension build
+node scripts/verify-extension.js
+
+# Create new icons from SVG
 node scripts/create-icons.js
 ```
+
+### Prerequisites for Development
+
+Make sure you have these dependencies installed:
+- **Node.js 18+**: Required for Next.js and build tools
+- **npm**: Package manager (comes with Node.js)
+
+### Development Workflow
+
+1. **Start development server with extension watching**:
+   ```bash
+   npm run dev:extension
+   ```
+   This command runs both the Next.js dev server and watches for extension changes.
+
+2. **Make your changes** to React components or extension files
+
+3. **The extension will auto-rebuild** when you save changes
+
+4. **Reload the extension** in Chrome extensions page to see changes
 
 ## 🎨 Customization Options
 
@@ -164,10 +225,22 @@ node scripts/create-icons.js
 - Check if extension is enabled
 - Try refreshing the page
 
+**Dependencies not installed?**
+- Run `npm install` to install all required packages
+- If you see peer dependency warnings, try `npm install --legacy-peer-deps`
+- Ensure you're in the correct project directory
+- Check that `package.json` exists in the current directory
+
 **Build errors?**
-- Run `npm install --legacy-peer-deps`
-- Clear `out` directory and rebuild
-- Check Node.js version (16+ required)
+- Run `npm install` (remove --legacy-peer-deps flag)
+- Clear `extension-build` directory and rebuild
+- Check Node.js version (18+ required)
+- Verify all dependencies are installed with `npm list`
+
+**Extension verification failing?**
+- Run `node scripts/verify-extension.js` to check build status
+- Ensure all required files are present in `extension-build` folder
+- Check that PNG icons were generated properly
 
 ## 📞 Support & Updates
 
@@ -180,8 +253,15 @@ node scripts/create-icons.js
 ### Updating the Extension:
 1. Pull latest changes: `git pull`
 2. Install dependencies: `npm install`
-3. Rebuild: `node scripts/build-extension.js`
-4. Reload in Chrome extensions page
+3. Rebuild extension: `npm run build:extension`
+4. Verify build: `node scripts/verify-extension.js`
+5. Reload the extension in Chrome extensions page
+
+### Extension Development Tips:
+- Use `npm run dev:extension` for development with auto-rebuild
+- Check console errors in Chrome DevTools when debugging
+- The extension uses Manifest V3 (latest Chrome extension standard)
+- All icons are generated as PNG from SVG sources
 
 ## 🎊 Success!
 

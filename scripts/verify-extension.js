@@ -12,10 +12,11 @@ const requiredFiles = [
   'background.js',
   'content.js',
   'content.css',
-  'icons/icon16.svg',
-  'icons/icon32.svg',
-  'icons/icon48.svg',
-  'icons/icon128.svg'
+  'sidebar.js',
+  'icons/icon16.png',
+  'icons/icon32.png',
+  'icons/icon48.png',
+  'icons/icon128.png'
 ];
 
 let allFilesExist = true;
