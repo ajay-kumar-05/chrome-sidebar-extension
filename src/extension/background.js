@@ -66,6 +66,11 @@ chrome.action.onClicked.addListener((tab) => {
 // Handle messages from content script or sidebar
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.action) {
+    case 'ping':
+      // Simple ping to test extension context
+      sendResponse({ status: 'alive', timestamp: Date.now() });
+      break;
+      
     case 'getPageContent':
       if (sender.tab?.id) {
         chrome.tabs.sendMessage(sender.tab.id, { action: 'getPageContent' }, (response) => {
@@ -77,7 +82,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     case 'openSidePanel':
       if (sender.tab?.id) {
-        chrome.sidePanel.open({ tabId: sender.tab.id });
+        try {
+          chrome.sidePanel.open({ tabId: sender.tab.id });
+          sendResponse({ status: 'opened' });
+        } catch (error) {
+          console.error('Failed to open side panel:', error);
+          sendResponse({ status: 'error', error: error.message });
+        }
+      } else {
+        sendResponse({ status: 'error', error: 'No tab ID available' });
       }
       break;
       

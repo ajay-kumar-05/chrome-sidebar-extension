@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AI Sidebar Assistant",
+  "name": "Fuel IX CA",
   "version": "1.0.0",
   "description": "AI-powered sidebar extension for enhanced browsing experience",
   "permissions": [
@@ -10,8 +10,7 @@
     "contextMenus",
     "scripting",
     "tabs",
-    "tabCapture",
-    "permissions"
+    "tabCapture"
   ],
   "host_permissions": [
     "<all_urls>",

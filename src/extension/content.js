@@ -44,7 +44,7 @@
       
       // Send selected text to background script immediately
       try {
-        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
           console.warn('Extension context not available for text selection');
           return;
         }
@@ -141,21 +141,37 @@
     // Click handler
     button.addEventListener('click', () => {
       try {
-        // Check if chrome runtime is available
-        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-          console.warn('Extension context not available, page needs refresh');
+        console.log('🔍 Float button clicked, checking extension context...');
+        
+        // More robust check for chrome runtime
+        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+          console.warn('Chrome runtime not available or extension context lost');
           showExtensionReloadNotice();
           return;
         }
         
-        chrome.runtime.sendMessage({ action: 'openSidePanel' }, (response) => {
+        // Test the connection first
+        chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
           if (chrome.runtime.lastError) {
-            console.error('Extension context error:', chrome.runtime.lastError);
+            console.error('Extension context error on ping:', chrome.runtime.lastError);
             showExtensionReloadNotice();
+            return;
           }
+          
+          // If ping successful, try to open side panel
+          console.log('✅ Extension context verified, opening side panel...');
+          chrome.runtime.sendMessage({ action: 'openSidePanel' }, (response) => {
+            if (chrome.runtime.lastError) {
+              console.error('Failed to open side panel:', chrome.runtime.lastError);
+              showExtensionReloadNotice();
+            } else {
+              console.log('✅ Side panel opened successfully');
+            }
+          });
         });
+        
       } catch (error) {
-        console.error('Extension context invalidated:', error);
+        console.error('Exception in float button click:', error);
         showExtensionReloadNotice();
       }
     });
@@ -277,34 +293,43 @@
     
     try {
       // Check if chrome runtime is available
-      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
         console.warn('Extension context not available for selection action');
         showExtensionReloadNotice();
         return;
       }
       
-      // Open sidebar and send action
-      chrome.runtime.sendMessage({
-        action: 'openSidePanel',
-      }, (response) => {
+      // Test connection first, then open sidebar and send action
+      chrome.runtime.sendMessage({ action: 'ping' }, (pingResponse) => {
         if (chrome.runtime.lastError) {
-          console.error('Failed to open side panel:', chrome.runtime.lastError);
+          console.error('Ping failed:', chrome.runtime.lastError);
           showExtensionReloadNotice();
           return;
         }
         
-        // Send the specific action to background script
-        setTimeout(() => {
-          chrome.runtime.sendMessage({
-            action: action,
-            text: selectedText,
-            pageUrl: window.location.href,
-          }, (response) => {
-            if (chrome.runtime.lastError) {
-              console.warn('Failed to send action:', chrome.runtime.lastError);
-            }
-          });
-        }, 500);
+        // Open sidebar
+        chrome.runtime.sendMessage({
+          action: 'openSidePanel',
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('Failed to open side panel:', chrome.runtime.lastError);
+            showExtensionReloadNotice();
+            return;
+          }
+          
+          // Send the specific action to background script
+          setTimeout(() => {
+            chrome.runtime.sendMessage({
+              action: action,
+              text: selectedText,
+              pageUrl: window.location.href,
+            }, (response) => {
+              if (chrome.runtime.lastError) {
+                console.warn('Failed to send action:', chrome.runtime.lastError);
+              }
+            });
+          }, 500);
+        });
       });
     } catch (error) {
       console.error('Extension context error during selection action:', error);

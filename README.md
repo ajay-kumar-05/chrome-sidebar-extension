@@ -1,24 +1,24 @@
-# AI Sidebar Extension - Like Sider.ai
+# Chrome Sidebar Extension with XavChatWidget
 
-A powerful Chrome sidebar extension built with Next.js and TypeScript that provides AI-powered assistance for web browsing, similar to Sider.ai.
+A powerful Chrome sidebar extension built with Next.js and TypeScript that integrates XavChatWidget for professional AI-powered assistance during web browsing.
 
 ## 🚀 Features
 
-- **AI Chat Interface**: Interactive chat with OpenAI models
-- **Page Analysis**: Summarize and analyze web page content
-- **Text Selection**: Explain, translate, or analyze selected text
-- **Context Menus**: Right-click options for quick AI actions
-- **Multiple AI Models**: Support for GPT-3.5, GPT-4, and GPT-4 Turbo
-- **Dark/Light Mode**: Adaptive theme system
-- **Persistent Storage**: Chat history and settings persistence
-- **Floating Action Button**: Quick access to AI features
+- **XavChatWidget Integration**: Professional third-party chatbot service
+- **Chrome Side Panel**: Modern sidebar interface using Chrome's sidePanel API
+- **Page Context Awareness**: Can analyze and interact with current webpage content
+- **Dark/Light Mode**: Adaptive theme system with user preferences
+- **Easy Configuration**: Simple plugin setup and customization
+- **Persistent Storage**: Settings and preferences persistence
+- **Modern Architecture**: Built with latest web technologies
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: Next.js 15, React 19, TypeScript
 - **Styling**: Tailwind CSS
 - **State Management**: Zustand
-- **AI Integration**: OpenAI API
+- **Chatbot Service**: XavChatWidget (third-party plugin)
+- **Chrome APIs**: Manifest V3 with sidePanel API
 - **Build Tools**: Custom build pipeline for Chrome Extension
 
 ## 📦 Installation & Setup
@@ -27,7 +27,7 @@ A powerful Chrome sidebar extension built with Next.js and TypeScript that provi
 
 - Node.js 18+ 
 - Chrome Browser
-- OpenAI API Key
+- XavChatWidget account and configuration
 
 ### 1. Install Dependencies
 
@@ -35,12 +35,13 @@ A powerful Chrome sidebar extension built with Next.js and TypeScript that provi
 npm install
 ```
 
-### 2. Configure Environment
+### 2. Configure XavChatWidget
 
-Create a `.env.local` file (optional, API key can be set in extension):
+Edit `public/botPlugin.js` with your XavChatWidget settings:
 
-```env
-NEXT_PUBLIC_OPENAI_API_KEY=your_openai_api_key_here
+```javascript
+// Configure your XavChatWidget settings
+// Update the plugin configuration as needed
 ```
 
 ### 3. Development
@@ -56,7 +57,7 @@ This starts the Next.js dev server and watches for extension changes.
 ### 4. Build Extension
 
 ```bash
-npm run build
+npm run build:extension
 ```
 
 This creates a production build and packages the Chrome extension.

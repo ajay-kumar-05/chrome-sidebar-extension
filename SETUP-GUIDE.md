@@ -1,34 +1,30 @@
-# AI Sidebar Extension - Complete Setup Guide
+# Chrome Sidebar Extension with XavChatWidget - Complete Setup Guide
 
 ## 🎉 Congratulations! Your Chrome Extension is Ready!
 
-You have successfully created a **Chrome Sidebar Extension** similar to Sider.ai using Next.js and TypeScript.
+You have successfully created a **Chrome Sidebar Extension** with **XavChatWidget integration** using Next.js and TypeScript.
 
 ## 📦 What's Been Built
 
 ### Core Features ✅
-- **AI Chat Interface** - Interactive chat with OpenAI models
-- **Page Analysis** - Summarize and analyze web page content  
-- **Text Selection** - Explain, translate, or analyze selected text
-- **Context Menus** - Right-click options for quick AI actions
-- **Multiple AI Models** - GPT-3.5, GPT-4, and GPT-4 Turbo support
-- **Dark/Light Mode** - Adaptive theme system
-- **Persistent Storage** - Chat history and settings persistence
-- **Floating Action Button** - Quick access to AI features
+- **XavChatWidget Integration** - Professional third-party chatbot service
+- **Chrome Side Panel** - Modern sidebar interface using Chrome's sidePanel API
+- **Page Context Awareness** - Can analyze and interact with current webpage content
+- **Dark/Light Mode** - Adaptive theme system with user preferences
+- **Easy Configuration** - Simple plugin setup and customization
+- **Persistent Storage** - Settings and preferences persistence
+- **Modern Architecture** - Built with latest web technologies
 
 ### Project Structure
 ```
 ├── src/
 │   ├── components/          # React components
-│   │   ├── Sidebar.tsx     # Main sidebar component
-│   │   ├── ChatMessage.tsx # Message display
-│   │   ├── ChatInput.tsx   # Message input
+│   │   ├── Sidebar.tsx     # Main sidebar component (simplified)
+│   │   ├── ChatbotPlugin.tsx # XavChatWidget integration
 │   │   ├── SidebarHeader.tsx # Header with controls
 │   │   └── SettingsPanel.tsx # Settings interface
-│   ├── services/           # Service layer
-│   │   └── ai.ts          # OpenAI integration
 │   ├── store/             # State management (Zustand)
-│   │   └── index.ts       # Chat & UI stores
+│   │   └── index.ts       # UI store for themes/settings
 │   ├── extension/         # Chrome extension scripts
 │   │   ├── background.js  # Background service worker
 │   │   ├── content.js     # Content script
@@ -40,14 +36,16 @@ You have successfully created a **Chrome Sidebar Extension** similar to Sider.ai
 │   │       └── styles.css # Sidebar styles
 │   └── pages/             # Next.js pages
 ├── public/
+│   ├── botPlugin.js       # XavChatWidget plugin configuration
 │   ├── manifest.json      # Extension manifest
 │   └── icons/            # Extension icons (SVG source)
 ├── scripts/
-│   ├── build-extension.js # Main build script
+│   ├── build-extension.js # Main build script (includes botPlugin.js)
 │   ├── create-icons.js   # Icon generator (SVG to PNG)
 │   └── verify-extension.js # Extension verification
 └── extension-build/       # Built extension (ready for Chrome)
     ├── manifest.json      # Final manifest
+    ├── botPlugin.js       # XavChatWidget plugin
     ├── index.html         # Sidebar HTML
     ├── background.js      # Background service worker
     ├── content.js         # Content script

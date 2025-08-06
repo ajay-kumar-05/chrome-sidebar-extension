@@ -60,7 +60,25 @@ async function buildExtension() {
     );
     console.log('✅ Copied content.css');
     
-    // 4. Create icons directory and generate placeholder icons
+    // 4. Copy botPlugin.js from public directory
+    const botPluginSrc = path.join(srcDir, 'public/botPlugin.js');
+    if (await fs.pathExists(botPluginSrc)) {
+      await fs.copy(botPluginSrc, path.join(extensionDir, 'botPlugin.js'));
+      console.log('✅ Copied botPlugin.js');
+    } else {
+      console.log('⚠️ Warning: botPlugin.js not found in public directory');
+    }
+    
+    // 4.1. Copy chat_button.png from public directory
+    const chatButtonSrc = path.join(srcDir, 'public/chat_button.png');
+    if (await fs.pathExists(chatButtonSrc)) {
+      await fs.copy(chatButtonSrc, path.join(extensionDir, 'chat_button.png'));
+      console.log('✅ Copied chat_button.png');
+    } else {
+      console.log('⚠️ Warning: chat_button.png not found in public directory');
+    }
+    
+    // 5. Create icons directory and generate placeholder icons
     const iconsDir = path.join(extensionDir, 'icons');
     await fs.ensureDir(iconsDir);
     
@@ -82,6 +100,7 @@ async function buildExtension() {
     console.log('✅ background.js - Extension background worker');
     console.log('✅ content.js - Content script for page interaction');
     console.log('✅ content.css - Content script styles');
+    console.log('✅ botPlugin.js - Third-party chatbot plugin');
     console.log('✅ icons/ - Extension icons');
     console.log('');
     console.log('📝 To install the extension:');

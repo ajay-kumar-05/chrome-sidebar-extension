@@ -7,21 +7,13 @@
     "build": "next build && npm run build:extension",
     "build:extension": "node scripts/build-extension.js",
     "start": "next start",
-    "lint": "next lint",
-    "dev:extension": "concurrently \"npm run dev\" \"npm run watch:extension\"",
-    "watch:extension": "nodemon --watch out --exec \"npm run build:extension\""
+    "lint": "next lint"
   },
   "dependencies": {
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "next": "15.4.5",
-    "@headlessui/react": "^2.0.4",
-    "@heroicons/react": "^2.0.18",
-    "clsx": "^2.1.1",
-    "framer-motion": "^11.0.28",
-    "openai": "^4.28.4",
-    "tailwindcss": "^3.4.1",
-    "zustand": "^4.5.2"
+    "tailwindcss": "^3.4.1"
   },
   "devDependencies": {
     "typescript": "^5",
@@ -33,10 +25,7 @@
     "eslint-config-next": "15.4.5",
     "@eslint/eslintrc": "^3",
     "autoprefixer": "^10.4.19",
-    "concurrently": "^8.2.2",
-    "copy-webpack-plugin": "^12.0.2",
     "fs-extra": "^11.2.0",
-    "nodemon": "^3.1.0",
     "postcss": "^8.4.38"
   }
 }
