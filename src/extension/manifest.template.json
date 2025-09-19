@@ -8,12 +8,14 @@
     "storage",
     "sidePanel",
     "contextMenus",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
   "host_permissions": [
     "http://*/*",
     "https://*/*",
-    "https://api.openai.com/*"
+    "https://api.openai.com/*",
+    "https://api.fuelix.ai/*"
   ],
   "background": {
     "service_worker": "background.js"

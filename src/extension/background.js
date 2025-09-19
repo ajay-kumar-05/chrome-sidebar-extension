@@ -74,6 +74,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true; // Keep message channel open for async response
       }
       break;
+    case 'requestSelectedText':
+      if (sender.tab?.id) {
+        chrome.tabs.sendMessage(sender.tab.id, { action: 'getSelectedText' }, (response) => {
+          sendResponse(response);
+        });
+        return true;
+      }
+      break;
     
     case 'openSidePanel':
       if (sender.tab?.id) {

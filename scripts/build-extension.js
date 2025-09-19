@@ -1,6 +1,11 @@
 const fs = require('fs-extra');
 const path = require('path');
 
+// ----------------------------------------------------------------------------
+// Chrome Extension Build Script
+// NOTE: Do NOT manually edit files under extension-build/; they are generated.
+// Make changes in src/extension/** and re-run this script (npm run build:extension).
+// ----------------------------------------------------------------------------
 async function buildExtension() {
   console.log('🚀 Building Chrome Extension...');
   

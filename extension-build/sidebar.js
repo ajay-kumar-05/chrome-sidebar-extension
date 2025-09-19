@@ -1,8 +1,14 @@
-console.log('🚀 AI Sidebar: Starting immediately...');
+/**
+ * NOTE: Do NOT edit files in extension-build/ directly.
+ * This is the source version of the sidebar. Run `npm run build:extension` to regenerate.
+ */
+console.log('🚀 AI Sidebar: Starting (source)...');
 
 class AISidebar {
     constructor() {
-        this.apiKey = localStorage.getItem('ai-sidebar-api-key') || '';
+    this.apiKey = localStorage.getItem('ai-sidebar-api-key') || '';
+    this.baseUrl = localStorage.getItem('ai-sidebar-base-url') || '';
+    this.modelId = localStorage.getItem('ai-sidebar-model-id') || '';
         this.messages = JSON.parse(localStorage.getItem('ai-sidebar-messages') || '[]');
         this.isLoading = false;
         console.log('✅ AISidebar: Data loaded');
@@ -13,6 +19,7 @@ class AISidebar {
         console.log('📱 AISidebar: Initializing UI...');
         this.render();
         this.attachEventListeners();
+        this.registerRuntimeListener();
         console.log('✅ AISidebar: Ready!');
     }
     
@@ -34,22 +41,37 @@ class AISidebar {
                 <div class="setup-content">
                     <div class="setup-form">
                         <div class="setup-icon">🔑</div>
-                        <div class="setup-title">OpenAI API Key Required</div>
+                        <div class="setup-title">API Configuration Required</div>
                         <div class="setup-text">
-                            Please enter your OpenAI API key to start using the AI assistant.
+                            Enter your OpenAI-compatible API details. Your key is stored locally only.
                         </div>
                         <input 
                             type="password" 
                             class="setup-input" 
                             id="api-key-input"
-                            placeholder="sk-..."
+                            placeholder="ak-... or sk-..."
+                        >
+                        <input 
+                            type="text" 
+                            class="setup-input" 
+                            id="base-url-input"
+                            placeholder="Base URL (e.g. https://api.fuelix.ai)"
+                            value="${this.baseUrl}"
+                        >
+                        <input 
+                            type="text" 
+                            class="setup-input" 
+                            id="model-id-input"
+                            placeholder="Model ID (e.g. claude-sonnet-4)"
+                            value="${this.modelId}"
                         >
                         <button class="setup-btn" id="save-api-key">
-                            Save API Key
+                            Save & Continue
                         </button>
-                        <a href="https://platform.openai.com/api-keys" target="_blank" class="setup-link">
-                            Get your API key from OpenAI
-                        </a>
+                        <div style="margin-top:8px; font-size:11px; color:#6b7280; line-height:1.4;">
+                            Uses an <strong>OpenAI-compatible</strong> Chat Completions API.<br>
+                            Data is sent directly from your browser to the configured endpoint.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -67,14 +89,6 @@ class AISidebar {
                     <div class="header-actions">
                         <button class="btn btn-danger" id="clear-chat" title="Clear chat">🗑️</button>
                         <button class="btn" id="settings-btn" title="Settings">⚙️</button>
-                    </div>
-                </div>
-                
-                <div class="quick-actions">
-                    <div class="actions-grid">
-                        <button class="action-btn blue" id="summarize-page">Summarize Page</button>
-                        <button class="action-btn green" id="explain-selected">Explain Selected</button>
-                        <button class="action-btn purple" id="translate-text">Translate</button>
                     </div>
                 </div>
                 
@@ -190,26 +204,102 @@ class AISidebar {
             translateBtn.addEventListener('click', () => this.quickAction('translate'));
         }
     }
+
+    registerRuntimeListener() {
+        if (this._runtimeRegistered) return;
+        chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+            if (msg.target && msg.target !== 'sidebar') return; // only handle sidebar-targeted
+            switch (msg.action) {
+                case 'setSelectedText':
+                    this.selectedText = msg.text || '';
+                    break;
+                case 'explain':
+                case 'translate':
+                case 'summarize':
+                    this.handleExternalAction(msg.action, msg.text, msg.pageUrl);
+                    break;
+                case 'pageChanged':
+                    this.currentPage = { url: msg.pageUrl, title: msg.title };
+                    break;
+            }
+        });
+        this._runtimeRegistered = true;
+    }
+
+    handleExternalAction(action, text, pageUrl) {
+        // If text not passed but we stored one, use stored
+        let selected = text || this.selectedText || '';
+        let prompt;
+        switch (action) {
+            case 'explain':
+                if (!selected) {
+                    return this.fetchLatestSelection().then(sel => this.handleExternalAction(action, sel, pageUrl));
+                }
+                prompt = `Explain the following text clearly and concisely:\n\n${selected}`;
+                break;
+            case 'translate':
+                if (!selected) {
+                    return this.fetchLatestSelection().then(sel => this.handleExternalAction(action, sel, pageUrl));
+                }
+                prompt = `Translate the following text to English while preserving meaning and tone:\n\n${selected}`;
+                break;
+            case 'summarize':
+                if (selected) {
+                    prompt = `Summarize this text:\n\n${selected}`;
+                } else {
+                    prompt = `Summarize the current page briefly.${this.currentPage?.title ? ' Page title: ' + this.currentPage.title : ''}`;
+                }
+                break;
+        }
+        if (prompt) {
+            this.addMessage({ role: 'user', content: prompt });
+            this.sendToAI(prompt);
+        }
+    }
+
+    fetchLatestSelection() {
+        return new Promise(resolve => {
+            try {
+                chrome.runtime.sendMessage({ action: 'requestSelectedText' }, (res) => {
+                    const sel = res?.selectedText?.trim();
+                    if (sel) {
+                        this.selectedText = sel;
+                        resolve(sel);
+                    } else {
+                        this.addMessage({ role: 'assistant', content: 'No text is selected. Highlight some page text first, then retry.' });
+                        resolve('');
+                    }
+                });
+            } catch (e) {
+                console.error('Selection fetch error', e);
+                this.addMessage({ role: 'assistant', content: 'Could not retrieve selection. Please highlight text and try again.' });
+                resolve('');
+            }
+        });
+    }
     
     saveApiKey() {
-        const input = document.getElementById('api-key-input');
-        const key = input.value.trim();
-        
-        if (!key) {
-            alert('Please enter a valid API key');
-            return;
+        const keyInput = document.getElementById('api-key-input');
+        const baseUrlInput = document.getElementById('base-url-input');
+        const modelIdInput = document.getElementById('model-id-input');
+        const key = (keyInput?.value || '').trim();
+        const baseUrl = (baseUrlInput?.value || '').trim().replace(/\/$/, '');
+        const modelId = (modelIdInput?.value || '').trim();
+
+        if (!key) { alert('Please enter an API key'); return; }
+        if (!baseUrl) { alert('Please enter a Base URL'); return; }
+        if (!modelId) { alert('Please enter a Model ID'); return; }
+        if (!/^([a-z]{2,3}-)?[A-Za-z0-9-_]{10,}$/.test(key)) {
+            if (!confirm('The API key format looks unusual. Save anyway?')) { return; }
         }
-        
-        if (!key.startsWith('sk-')) {
-            alert('API key should start with "sk-"');
-            return;
-        }
-        
+
         localStorage.setItem('ai-sidebar-api-key', key);
-        this.apiKey = key;
+        localStorage.setItem('ai-sidebar-base-url', baseUrl);
+        localStorage.setItem('ai-sidebar-model-id', modelId);
+        this.apiKey = key; this.baseUrl = baseUrl; this.modelId = modelId;
         this.render();
         this.attachEventListeners();
-        console.log('✅ API key saved');
+        console.log('✅ API configuration saved');
     }
     
     async sendMessage() {
@@ -251,46 +341,34 @@ class AISidebar {
     async sendToAI(message) {
         this.isLoading = true;
         this.updateUI();
-        
         try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const endpoint = `${this.baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+            const model = this.modelId || 'claude-sonnet-4';
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
+                    model,
                     messages: [
-                        { role: 'system', content: 'You are a helpful AI assistant integrated into a browser sidebar. Be concise and helpful.' },
+                        { role: 'system', content: 'You are a helpful AI assistant integrated into a browser sidebar. Be concise, helpful, and adapt to user quick actions like summarize, explain, translate.' },
                         ...this.messages.slice(-10).map(msg => ({ role: msg.role, content: msg.content }))
                     ],
                     max_tokens: 1000,
                     temperature: 0.7
                 })
             });
-            
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status} ${response.statusText}`);
-            }
-            
+            if (!response.ok) { throw new Error(`API Error: ${response.status} ${response.statusText}`); }
             const data = await response.json();
-            
             if (data.choices && data.choices[0]) {
-                this.addMessage({
-                    role: 'assistant',
-                    content: data.choices[0].message.content
-                });
-            } else {
-                throw new Error('Invalid response from OpenAI');
-            }
-            
+                const aiContent = data.choices[0].message?.content || data.choices[0].text || '[No content in response]';
+                this.addMessage({ role: 'assistant', content: aiContent });
+            } else { throw new Error('Invalid response from AI provider'); }
         } catch (error) {
             console.error('AI Error:', error);
-            this.addMessage({
-                role: 'assistant',
-                content: `Sorry, I encountered an error: ${error.message}. Please check your API key and try again.`
-            });
+            this.addMessage({ role: 'assistant', content: `Sorry, I encountered an error: ${error.message}. Please verify your API key, base URL, and model then try again.` });
         } finally {
             this.isLoading = false;
             this.updateUI();
@@ -320,7 +398,7 @@ class AISidebar {
     }
     
     showSettings() {
-        if (confirm('Reset API key?')) {
+        if (confirm('Reset API key (Base URL & Model will stay)?')) {
             localStorage.removeItem('ai-sidebar-api-key');
             this.apiKey = '';
             this.render();
@@ -329,17 +407,8 @@ class AISidebar {
     }
     
     quickAction(action) {
-        switch (action) {
-            case 'summarize':
-                this.sendQuickMessage('Please summarize the current page');
-                break;
-            case 'explain':
-                this.sendQuickMessage('Please explain the selected text');
-                break;
-            case 'translate':
-                this.sendQuickMessage('Please translate the selected text to English');
-                break;
-        }
+        // Reuse external action handler logic
+        this.handleExternalAction(action, this.selectedText, this.currentPage?.url);
     }
     
     sendQuickMessage(message) {
