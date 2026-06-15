@@ -1,0 +1,7 @@
+/* Content-script styles injected into every page.
+   The floating button is positioned inline by the script; the selection popup
+   is fully styled at runtime (see ensurePopupStyles in index.ts) so it stays
+   self-contained and never clashes with host-page styles. */
+#ai-sidebar-float-btn {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
