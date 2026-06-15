@@ -198,5 +198,3 @@ You now have a fully functional AI-powered Chrome sidebar extension!
 **Happy AI-powered browsing!** 🤖✨
 
 ---
-
-*This extension is inspired by Sider.ai and built with modern web technologies for educational and development purposes.*

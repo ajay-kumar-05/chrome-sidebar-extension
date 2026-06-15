@@ -11,6 +11,9 @@
 !.yarn/versions
 .pnp.js
 
+#builds
+/extension-build
+
 # testing
 /coverage
 
