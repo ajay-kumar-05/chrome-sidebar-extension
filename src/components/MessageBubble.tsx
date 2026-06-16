@@ -1,7 +1,8 @@
 import { BotIcon } from './icons';
+import Markdown from './Markdown';
 import { useSettings } from '@/store/settings';
 import { useT } from '@/hooks/useT';
-import { formatContent, initials, timeLabel } from '@/lib/format';
+import { initials, timeLabel } from '@/lib/format';
 import type { Message } from '@/lib/types';
 
 interface Props {
@@ -22,10 +23,9 @@ export default function MessageBubble({ message }: Props) {
         <div className="message-meta">
           {who} · {timeLabel(message.timestamp)}
         </div>
-        <div
-          className="message-bubble"
-          dangerouslySetInnerHTML={{ __html: formatContent(message.content) }}
-        />
+        <div className="message-bubble">
+          {isUser ? message.content : <Markdown>{message.content}</Markdown>}
+        </div>
       </div>
     </div>
   );

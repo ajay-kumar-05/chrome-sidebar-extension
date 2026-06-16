@@ -17,19 +17,3 @@ export function timeLabel(ts: number): string {
     return '';
   }
 }
-
-/**
- * Render a minimal subset of markdown (`code` and **bold**) to safe HTML.
- * Input is escaped first, so the result is safe for dangerouslySetInnerHTML.
- */
-export function formatContent(text: string): string {
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-  return escaped
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-}

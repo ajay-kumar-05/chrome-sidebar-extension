@@ -4,22 +4,12 @@
  * Runs in every page, so it stays plain DOM — no React / Tailwind here.
  */
 import './content.css';
+import { TRANSLATE_LANGS } from '@/lib/languages';
 
 interface IncomingMessage {
   action: string;
   text?: string;
 }
-
-const TRANSLATE_LANGS = [
-  { name: 'English', flag: '🇬🇧' },
-  { name: 'Hindi', flag: '🇮🇳' },
-  { name: 'French', flag: '🇫🇷' },
-  { name: 'Spanish', flag: '🇪🇸' },
-  { name: 'German', flag: '🇩🇪' },
-  { name: 'Chinese', flag: '🇨🇳' },
-  { name: 'Japanese', flag: '🇯🇵' },
-  { name: 'Arabic', flag: '🇸🇦' },
-];
 
 let selectedText = '';
 let isConfigured = false;
