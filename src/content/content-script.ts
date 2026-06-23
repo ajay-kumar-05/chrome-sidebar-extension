@@ -5,6 +5,9 @@
  */
 import './content.css';
 import { TRANSLATE_LANGS } from '@/lib/languages';
+import { t } from '@/lib/i18n';
+import { LANG_STORAGE_KEY } from '@/lib/messaging';
+import type { LangCode } from '@/lib/types';
 
 interface IncomingMessage {
   action: string;
@@ -13,18 +16,24 @@ interface IncomingMessage {
 
 let selectedText = '';
 let isConfigured = false;
+let lang: LangCode = 'en';
 let popupTimer: ReturnType<typeof setTimeout> | null = null;
 
 function init(): void {
   // Load the "configured" flag and keep it in sync with the sidebar.
   try {
-    chrome.storage?.local?.get('ai-sidebar-configured', (res) => {
+    chrome.storage?.local?.get(['ai-sidebar-configured', LANG_STORAGE_KEY], (res) => {
       isConfigured = !!res?.['ai-sidebar-configured'];
+      lang = (res?.[LANG_STORAGE_KEY] as LangCode) ?? 'en';
     });
     chrome.storage?.onChanged?.addListener((changes, area) => {
-      if (area === 'local' && changes['ai-sidebar-configured']) {
+      if (area !== 'local') return;
+      if (changes['ai-sidebar-configured']) {
         isConfigured = !!changes['ai-sidebar-configured'].newValue;
         if (!isConfigured) hideSelectionPopup();
+      }
+      if (changes[LANG_STORAGE_KEY]) {
+        lang = (changes[LANG_STORAGE_KEY].newValue as LangCode) ?? 'en';
       }
     });
   } catch {
@@ -58,7 +67,7 @@ function handleMessage(
   request: IncomingMessage,
   _sender: chrome.runtime.MessageSender,
   sendResponse: (response?: unknown) => void,
-): void {
+): boolean | void {
   switch (request.action) {
     case 'ping':
       sendResponse({ pong: true });
@@ -74,7 +83,139 @@ function handleMessage(
     case 'getSelectedText':
       sendResponse({ selectedText });
       break;
+    case 'startRegionCapture':
+      startRegionCapture(sendResponse);
+      return true; // keep the message channel open for the async response
   }
+}
+
+/**
+ * Show a full-page overlay where the user drags to select a rectangle. Resolves
+ * (via sendResponse) with the chosen region in CSS pixels relative to the
+ * viewport, plus the devicePixelRatio so the side panel can crop the capture.
+ * The overlay is removed (and a repaint awaited) before responding, so it never
+ * appears in the captured image.
+ */
+function startRegionCapture(sendResponse: (response?: unknown) => void): void {
+  hideSelectionPopup();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ai-sidebar-region-overlay';
+  overlay.setAttribute(
+    'style',
+    [
+      'position:fixed',
+      'inset:0',
+      'z-index:2147483647',
+      'cursor:crosshair',
+      'background:rgba(15,18,34,.28)',
+    ].join(';'),
+  );
+
+  const box = document.createElement('div');
+  box.setAttribute(
+    'style',
+    [
+      'position:fixed',
+      'border:2px solid #6366f1',
+      'background:rgba(99,102,241,.12)',
+      'box-shadow:0 0 0 100vmax rgba(15,18,34,.28)',
+      'pointer-events:none',
+      'display:none',
+      'border-radius:2px',
+    ].join(';'),
+  );
+
+  const hint = document.createElement('div');
+  hint.setAttribute(
+    'style',
+    [
+      'position:fixed',
+      'top:16px',
+      'left:50%',
+      'transform:translateX(-50%)',
+      'z-index:2147483647',
+      'padding:8px 14px',
+      'border-radius:999px',
+      'background:#0f1222',
+      'color:#fff',
+      'font:600 12.5px/1 Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
+      'box-shadow:0 10px 24px -10px rgba(0,0,0,.6)',
+      'pointer-events:none',
+    ].join(';'),
+  );
+  hint.textContent = 'Drag to capture · Esc to cancel';
+
+  overlay.appendChild(box);
+  overlay.appendChild(hint);
+  document.documentElement.appendChild(overlay);
+
+  let startX = 0;
+  let startY = 0;
+  let dragging = false;
+  let finished = false;
+
+  const rectFrom = (x1: number, y1: number, x2: number, y2: number) => ({
+    left: Math.min(x1, x2),
+    top: Math.min(y1, y2),
+    width: Math.abs(x2 - x1),
+    height: Math.abs(y2 - y1),
+  });
+
+  const cleanup = () => {
+    document.removeEventListener('keydown', onKey, true);
+    overlay.remove();
+  };
+
+  const finish = (result: unknown) => {
+    if (finished) return;
+    finished = true;
+    cleanup();
+    // Wait for two frames so the overlay is fully gone before the tab is captured.
+    requestAnimationFrame(() => requestAnimationFrame(() => sendResponse(result)));
+  };
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      finish({ cancelled: true });
+    }
+  };
+
+  overlay.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    box.style.display = 'block';
+    box.style.left = `${startX}px`;
+    box.style.top = `${startY}px`;
+    box.style.width = '0px';
+    box.style.height = '0px';
+  });
+
+  overlay.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const r = rectFrom(startX, startY, e.clientX, e.clientY);
+    box.style.left = `${r.left}px`;
+    box.style.top = `${r.top}px`;
+    box.style.width = `${r.width}px`;
+    box.style.height = `${r.height}px`;
+  });
+
+  overlay.addEventListener('mouseup', (e) => {
+    if (!dragging) return;
+    dragging = false;
+    const r = rectFrom(startX, startY, e.clientX, e.clientY);
+    if (r.width < 5 || r.height < 5) {
+      finish({ cancelled: true });
+      return;
+    }
+    finish({ rect: r, dpr: window.devicePixelRatio || 1 });
+  });
+
+  document.addEventListener('keydown', onKey, true);
 }
 
 function createFloatingButton(): void {
@@ -180,12 +321,12 @@ function showSelectionPopup(selection: Selection): void {
     <div class="ai-popup-bar">
       <button class="ai-popup-btn" data-action="explain">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
-        Explain
+        ${t(lang, 'actExplain')}
       </button>
       <span class="ai-popup-split">
         <button class="ai-popup-btn" data-action="translate">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7M9 3v2c0 4-2 7-5 9M5 9c0 2.5 2.5 4.5 6 4.5M12 20l4-9 4 9M13.5 17h5"/></svg>
-          Translate
+          ${t(lang, 'actTranslate')}
         </button>
         <button class="ai-popup-caret" id="ai-translate-caret" title="Choose language">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -193,7 +334,7 @@ function showSelectionPopup(selection: Selection): void {
       </span>
       <button class="ai-popup-btn" data-action="summarize">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
-        Summarize
+        ${t(lang, 'actSummarize')}
       </button>
     </div>
     <div class="ai-popup-langs hidden" id="ai-popup-langs">

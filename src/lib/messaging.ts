@@ -1,4 +1,7 @@
-import type { PageContext, RuntimeMessage } from './types';
+import type { LangCode, PageContext, RuntimeMessage } from './types';
+
+/** Storage key the content script reads to localize the in-page popup. */
+export const LANG_STORAGE_KEY = 'ai-sidebar-lang';
 
 /** True when running inside the extension (vs. the plain `vite` web preview). */
 export const isExtension = (): boolean =>
@@ -27,10 +30,128 @@ export function syncConfigured(configured: boolean): void {
   }
 }
 
+/**
+ * Mirror the selected UI language to chrome.storage so the content script can
+ * localize the in-page selection popup (it can't read the side panel's state).
+ */
+export function syncLang(lang: LangCode): void {
+  if (!isExtension()) return;
+  try {
+    chrome.storage.local.set({ [LANG_STORAGE_KEY]: lang });
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 /** Open the side panel for the active tab (called from in-page actions). */
 export function openSidePanel(): void {
   if (!isExtension()) return;
   chrome.runtime.sendMessage({ action: 'openSidePanel' } satisfies RuntimeMessage);
+}
+
+/**
+ * Capture the visible area of the active tab as a PNG data URL.
+ * Resolves to null on restricted pages (chrome://, web store, …) or on error.
+ */
+export function captureVisibleTab(): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (!isExtension()) return resolve(null);
+    try {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tab = tabs?.[0];
+        if (!tab || isRestrictedUrl(tab.url)) return resolve(null);
+        chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, (dataUrl) => {
+          if (chrome.runtime.lastError || !dataUrl) return resolve(null);
+          resolve(dataUrl);
+        });
+      });
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+export interface RegionRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** Result of a region capture request. */
+export interface RegionCaptureResult {
+  /** Cropped PNG data URL, or null if cancelled / unavailable. */
+  image: string | null;
+  /** True when the user explicitly cancelled (Esc / tiny drag). */
+  cancelled?: boolean;
+  /** True when the active tab can't be captured (restricted / no content script). */
+  unavailable?: boolean;
+}
+
+/** Crop a data-URL image to a region (in device pixels) and return a PNG data URL. */
+function cropImage(dataUrl: string, sx: number, sy: number, sw: number, sh: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(sw));
+      canvas.height = Math.max(1, Math.round(sh));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('no 2d context'));
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('image load failed'));
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * Let the user drag-select a region on the active tab, then capture & crop just
+ * that region. Coordinates the content-script overlay with captureVisibleTab.
+ */
+export function captureRegion(): Promise<RegionCaptureResult> {
+  return new Promise((resolve) => {
+    if (!isExtension()) return resolve({ image: null, unavailable: true });
+    try {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tab = tabs?.[0];
+        if (!tab?.id || isRestrictedUrl(tab.url)) {
+          return resolve({ image: null, unavailable: true });
+        }
+        chrome.tabs.sendMessage(
+          tab.id,
+          { action: 'startRegionCapture' },
+          async (res: { rect?: RegionRect; dpr?: number; cancelled?: boolean } | undefined) => {
+            if (chrome.runtime.lastError || !res) {
+              return resolve({ image: null, unavailable: true });
+            }
+            if (res.cancelled || !res.rect) {
+              return resolve({ image: null, cancelled: true });
+            }
+            const full = await captureVisibleTab();
+            if (!full) return resolve({ image: null, unavailable: true });
+            const dpr = res.dpr || 1;
+            const { left, top, width, height } = res.rect;
+            try {
+              const cropped = await cropImage(
+                full,
+                left * dpr,
+                top * dpr,
+                width * dpr,
+                height * dpr,
+              );
+              resolve({ image: cropped });
+            } catch {
+              resolve({ image: null, unavailable: true });
+            }
+          },
+        );
+      });
+    } catch {
+      resolve({ image: null, unavailable: true });
+    }
+  });
 }
 
 /** Subscribe to runtime messages addressed to the sidebar. Returns an unsubscribe fn. */
@@ -45,8 +166,7 @@ export function onRuntimeMessage(handler: (msg: RuntimeMessage) => void): () => 
 }
 
 /** Read the active tab's title/url/text via an injected script. */
-export function fetchPageContent(): Promise<PageContext | null> {
-  return new Promise((resolve) => {
+export function fetchPageContent(): Promise<PageContext | null> {  return new Promise((resolve) => {
     if (!isExtension()) return resolve(null);
     try {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

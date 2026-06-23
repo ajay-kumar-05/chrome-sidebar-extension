@@ -7,7 +7,7 @@ import SettingsModal from './SettingsModal';
 import type { QuickAction } from '@/lib/types';
 
 interface Props {
-  onSend: (text: string) => void;
+  onSend: (text: string, images?: string[]) => void;
   onAction: (action: QuickAction, text?: string, targetLang?: string) => void;
 }
 

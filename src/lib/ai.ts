@@ -31,14 +31,29 @@ export async function sendChat({
 }: SendChatOptions): Promise<string> {
   const endpoint = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
 
-  const apiMessages: Array<{ role: string; content: string }> = [
+  type TextPart = { type: 'text'; text: string };
+  type ImagePart = { type: 'image_url'; image_url: { url: string } };
+  type ApiContent = string | Array<TextPart | ImagePart>;
+
+  const apiMessages: Array<{ role: string; content: ApiContent }> = [
     {
       role: 'system',
       content: `You are a helpful AI assistant integrated into a browser sidebar. Be concise and helpful, and adapt to quick actions like summarize, explain, translate. Always reply in ${langName(lang)} unless the user explicitly asks otherwise.`,
     },
   ];
   if (contextText) apiMessages.push({ role: 'system', content: contextText });
-  apiMessages.push(...messages.slice(-10).map((m) => ({ role: m.role, content: m.content })));
+  apiMessages.push(
+    ...messages.slice(-10).map((m) => {
+      // Attach images (data URLs) as vision parts when present.
+      if (m.images?.length) {
+        const parts: Array<TextPart | ImagePart> = [];
+        if (m.content) parts.push({ type: 'text', text: m.content });
+        for (const url of m.images) parts.push({ type: 'image_url', image_url: { url } });
+        return { role: m.role, content: parts };
+      }
+      return { role: m.role, content: m.content };
+    }),
+  );
 
   const response = await fetch(endpoint, {
     method: 'POST',

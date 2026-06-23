@@ -24,7 +24,18 @@ export default function MessageBubble({ message }: Props) {
           {who} · {timeLabel(message.timestamp)}
         </div>
         <div className="message-bubble">
-          {isUser ? message.content : <Markdown>{message.content}</Markdown>}
+          {message.images?.length ? (
+            <div className="message-images">
+              {message.images.map((src, i) => (
+                <img key={i} className="message-image" src={src} alt={t('attachAlt')} />
+              ))}
+            </div>
+          ) : null}
+          {isUser ? (
+            message.content && <span>{message.content}</span>
+          ) : (
+            <Markdown>{message.content}</Markdown>
+          )}
         </div>
       </div>
     </div>

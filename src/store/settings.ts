@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { LangCode, Theme } from '@/lib/types';
-import { syncConfigured } from '@/lib/messaging';
+import { syncConfigured, syncLang } from '@/lib/messaging';
 
 export interface SettingsState {
   apiKey: string;
@@ -29,6 +29,7 @@ export const useSettings = create<SettingsState>()(
       update: (patch) => {
         set(patch);
         if ('apiKey' in patch) syncConfigured(!!get().apiKey);
+        if ('lang' in patch) syncLang(get().lang);
       },
 
       resetApiKey: () => {
@@ -41,6 +42,7 @@ export const useSettings = create<SettingsState>()(
       onRehydrateStorage: () => (state) => {
         // Keep the content script's "configured" flag in sync on load.
         if (state) syncConfigured(!!state.apiKey);
+        if (state) syncLang(state.lang);
       },
     },
   ),

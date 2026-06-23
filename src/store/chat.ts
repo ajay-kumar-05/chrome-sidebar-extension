@@ -12,7 +12,7 @@ export interface ChatState {
   isLoading: boolean;
   selectedText: string;
   currentPage: Pick<PageContext, 'title' | 'url'> | null;
-  addMessage: (message: Pick<Message, 'role' | 'content'>) => void;
+  addMessage: (message: Pick<Message, 'role' | 'content'> & Partial<Pick<Message, 'images'>>) => void;
   setLoading: (loading: boolean) => void;
   setSelectedText: (text: string) => void;
   setCurrentPage: (page: Pick<PageContext, 'title' | 'url'> | null) => void;
@@ -27,11 +27,12 @@ export const useChat = create<ChatState>()(
       selectedText: '',
       currentPage: null,
 
-      addMessage: ({ role, content }) =>
+      addMessage: ({ role, content, images }) =>
         set((state) => ({
-          messages: [...state.messages, { id: newId(), role, content, timestamp: Date.now() }].slice(
-            -MAX_MESSAGES,
-          ),
+          messages: [
+            ...state.messages,
+            { id: newId(), role, content, images, timestamp: Date.now() },
+          ].slice(-MAX_MESSAGES),
         })),
 
       setLoading: (isLoading) => set({ isLoading }),

@@ -7,6 +7,8 @@ export interface Message {
   role: Role;
   content: string;
   timestamp: number;
+  /** Optional image attachments as data URLs (base64), sent as vision content. */
+  images?: string[];
 }
 
 export type LangCode = 'en' | 'hi' | 'fr' | 'es';

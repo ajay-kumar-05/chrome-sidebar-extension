@@ -44,10 +44,10 @@ export function useChatController() {
 
   /** Send a free-form user message. */
   const send = useCallback(
-    (text: string) => {
+    (text: string, images?: string[]) => {
       const content = text.trim();
-      if (!content || useChat.getState().isLoading) return;
-      addMessage({ role: 'user', content });
+      if ((!content && !images?.length) || useChat.getState().isLoading) return;
+      addMessage({ role: 'user', content, images });
       void runAI();
     },
     [addMessage, runAI],
