@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useChat } from '@/store/chat';
+import { useChat, activeMessages } from '@/store/chat';
 import { useSettings } from '@/store/settings';
 import { buildActionPrompt, sendChat } from '@/lib/ai';
-import { fetchLatestSelection, fetchPageContent } from '@/lib/messaging';
+import { applyInlineEdit, fetchLatestSelection, fetchPageContent } from '@/lib/messaging';
 import { t } from '@/lib/i18n';
 import { AuthError, NetworkError, RateLimitError, isAbortError } from '@/lib/errors';
 import { MAX_PAGE_TEXT, REQUEST_TIMEOUT_MS } from '@/lib/constants';
-import type { LangCode, QuickAction } from '@/lib/types';
+import type { InlineEditMode, LangCode, Message, QuickAction } from '@/lib/types';
 
 /** Localized, user-facing message for a typed AI error. */
 function messageForError(err: unknown, lang: LangCode): string {
@@ -39,7 +39,7 @@ export function useChatController() {
 
       // Snapshot the conversation *before* adding the placeholder, so the empty
       // assistant bubble we stream into isn't itself sent to the model.
-      const history = useChat.getState().messages;
+      const history = activeMessages(useChat.getState());
       const id = addMessage({ role: 'assistant', content: '' });
       setLoading(true);
 
@@ -85,6 +85,25 @@ export function useChatController() {
 
   /** Cancel the in-flight request, if any. */
   const stop = useCallback(() => abortRef.current?.abort(), []);
+
+  /** Rewrite / fix a page selection and send the result back to replace it. */
+  const runInlineEdit = useCallback(
+    async (mode: InlineEditMode, text: string) => {
+      const { apiKey, baseUrl, model, lang } = useSettings.getState();
+      const prompt =
+        mode === 'grammar'
+          ? `Correct the grammar and spelling of the following text. Reply with ONLY the corrected text — no quotes, no commentary:\n\n${text}`
+          : `Rewrite the following text to be clearer and more concise, preserving its meaning, tone and language. Reply with ONLY the rewritten text — no quotes, no commentary:\n\n${text}`;
+      const msg: Message = { id: 'inline', role: 'user', content: prompt, timestamp: Date.now() };
+      try {
+        const result = await sendChat({ apiKey, baseUrl, model, lang, messages: [msg] });
+        await applyInlineEdit(result.trim());
+      } catch (error) {
+        addMessage({ role: 'assistant', content: messageForError(error, lang) });
+      }
+    },
+    [addMessage],
+  );
 
   /** Send a free-form user message. */
   const send = useCallback(
@@ -137,5 +156,5 @@ export function useChatController() {
     [addMessage, runAI, summarizePage],
   );
 
-  return { send, handleAction, summarizePage, stop };
+  return { send, handleAction, summarizePage, stop, runInlineEdit };
 }

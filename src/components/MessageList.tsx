@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
 import Welcome from './Welcome';
-import { useChat } from '@/store/chat';
+import { useChat, activeMessages } from '@/store/chat';
 import type { QuickAction } from '@/lib/types';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
 
 /** Scrollable conversation area: welcome → messages → typing indicator. */
 export default function MessageList({ onAction }: Props) {
-  const messages = useChat((s) => s.messages);
+  const messages = useChat(activeMessages);
   const isLoading = useChat((s) => s.isLoading);
   const endRef = useRef<HTMLDivElement>(null);
 

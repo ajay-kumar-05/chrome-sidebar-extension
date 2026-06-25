@@ -48,7 +48,13 @@ export type RuntimeMessage =
   | { action: 'translate'; text: string; pageUrl?: string; targetLang?: string }
   | { action: 'summarize'; text?: string; pageUrl?: string; targetLang?: string }
   // Active tab finished loading.
-  | { action: 'pageChanged'; pageUrl: string; title?: string };
+  | { action: 'pageChanged'; pageUrl: string; title?: string }
+  // Inline page editing: rewrite/fix the selection, then replace it in place.
+  | { action: 'inlineEdit'; mode: InlineEditMode; text: string; pageUrl?: string }
+  | { action: 'applyInlineEdit'; text: string };
+
+/** Inline-edit transforms applied to an editable selection on the page. */
+export type InlineEditMode = 'rewrite' | 'grammar';
 
 /** A runtime message optionally restricted to a single surface (the sidebar). */
 export type BroadcastMessage = RuntimeMessage & { target?: 'sidebar' };

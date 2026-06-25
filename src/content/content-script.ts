@@ -8,12 +8,89 @@ import { TRANSLATE_LANGS } from '@/lib/languages';
 import { t } from '@/lib/i18n';
 import { LANG_STORAGE_KEY } from '@/lib/messaging';
 import { STORAGE_KEYS } from '@/lib/constants';
-import type { LangCode, QuickAction, RuntimeMessage } from '@/lib/types';
+import type { InlineEditMode, LangCode, QuickAction, RuntimeMessage } from '@/lib/types';
+
+/** A captured editable selection we can replace in place after an inline edit. */
+type EditTarget =
+  | { kind: 'input'; el: HTMLInputElement | HTMLTextAreaElement; start: number; end: number }
+  | { kind: 'ce'; range: Range };
 
 let selectedText = '';
 let isConfigured = false;
 let lang: LangCode = 'en';
 let popupTimer: ReturnType<typeof setTimeout> | null = null;
+/** Editable target under the current selection (enables Rewrite / Fix). */
+let currentEditable: EditTarget | null = null;
+/** Target captured when an inline edit was requested, applied on the reply. */
+let pendingEdit: EditTarget | null = null;
+
+const TEXT_INPUT_TYPES = ['text', 'search', 'url', 'tel', ''];
+
+/** Describe the editable selection (input/textarea or contenteditable), if any. */
+function editableInfo(): EditTarget | null {
+  const ae = document.activeElement;
+  const isTextInput =
+    ae instanceof HTMLInputElement && TEXT_INPUT_TYPES.includes(ae.type);
+  if (
+    (ae instanceof HTMLTextAreaElement || isTextInput) &&
+    typeof ae.selectionStart === 'number' &&
+    typeof ae.selectionEnd === 'number' &&
+    ae.selectionEnd > ae.selectionStart
+  ) {
+    return { kind: 'input', el: ae, start: ae.selectionStart, end: ae.selectionEnd };
+  }
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+    const node = sel.anchorNode;
+    const host =
+      node instanceof Element
+        ? node.closest<HTMLElement>('[contenteditable]')
+        : (node?.parentElement?.closest<HTMLElement>('[contenteditable]') ?? null);
+    if (host?.isContentEditable) {
+      return { kind: 'ce', range: sel.getRangeAt(0).cloneRange() };
+    }
+  }
+  return null;
+}
+
+/** Replace the captured editable selection with the model's result. */
+function applyEdit(text: string): void {
+  const target = pendingEdit;
+  pendingEdit = null;
+  if (!target || !text) return;
+  if (target.kind === 'input') {
+    const { el, start, end } = target;
+    const value = el.value;
+    el.value = value.slice(0, start) + text + value.slice(end);
+    const caret = start + text.length;
+    try {
+      el.setSelectionRange(caret, caret);
+    } catch {
+      /* some inputs disallow setSelectionRange */
+    }
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.focus();
+  } else {
+    try {
+      target.range.deleteContents();
+      target.range.insertNode(document.createTextNode(text));
+    } catch {
+      /* stale range */
+    }
+  }
+}
+
+/** Request an inline rewrite/fix: capture the target, open the panel, route it. */
+function handleInlineEdit(mode: InlineEditMode): void {
+  if (!currentEditable || !selectedText) return;
+  pendingEdit = currentEditable;
+  const text = selectedText;
+  chrome.runtime.sendMessage({ action: 'openSidePanel' } satisfies RuntimeMessage);
+  // Give the panel a moment to mount before routing the edit to it.
+  setTimeout(() => {
+    chrome.runtime.sendMessage({ action: 'inlineEdit', mode, text } satisfies RuntimeMessage);
+  }, 450);
+}
 
 function init(): void {
   // Load the "configured" flag and keep it in sync with the sidebar.
@@ -51,10 +128,12 @@ function handleTextSelection(e: Event): void {
 
   if (text && text !== selectedText) {
     selectedText = text;
+    currentEditable = editableInfo();
     chrome.runtime.sendMessage({ action: 'setSelectedText', text } satisfies RuntimeMessage);
     if (isConfigured && selection) showSelectionPopup(selection);
   } else if (!text) {
     selectedText = '';
+    currentEditable = null;
     hideSelectionPopup();
   }
 }
@@ -78,6 +157,9 @@ function handleMessage(
       break;
     case 'getSelectedText':
       sendResponse({ selectedText });
+      break;
+    case 'applyInlineEdit':
+      applyEdit(request.text);
       break;
     case 'startRegionCapture':
       startRegionCapture(sendResponse);
@@ -279,6 +361,7 @@ function ensurePopupStyles(): void {
     }
     .ai-popup-btn svg { width: 16px; height: 16px; color: #6366f1; }
     .ai-popup-btn:hover { background: #f1f2f5; }
+    .ai-popup-div { width: 1px; align-self: stretch; background: #e7e8ec; margin: 4px 2px; }
     .ai-popup-split { display: flex; align-items: stretch; }
     .ai-popup-split .ai-popup-btn { padding-right: 6px; }
     .ai-popup-caret {
@@ -315,6 +398,20 @@ function showSelectionPopup(selection: Selection): void {
   const rect = selection.getRangeAt(0).getBoundingClientRect();
   const popup = document.createElement('div');
   popup.id = 'ai-sidebar-selection-popup';
+
+  // Rewrite / Fix only make sense when the selection sits in an editable field.
+  const editButtons = currentEditable
+    ? `<span class="ai-popup-div"></span>
+      <button class="ai-popup-btn" data-edit="rewrite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        ${t(lang, 'actRewrite')}
+      </button>
+      <button class="ai-popup-btn" data-edit="grammar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2"/><path d="M9 19h6"/><path d="m9 13 2 2 4-4"/></svg>
+        ${t(lang, 'actFixGrammar')}
+      </button>`
+    : '';
+
   popup.innerHTML = `
     <div class="ai-popup-bar">
       <button class="ai-popup-btn" data-action="explain">
@@ -334,6 +431,7 @@ function showSelectionPopup(selection: Selection): void {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
         ${t(lang, 'actSummarize')}
       </button>
+      ${editButtons}
     </div>
     <div class="ai-popup-langs hidden" id="ai-popup-langs">
       ${TRANSLATE_LANGS.map(
@@ -350,12 +448,20 @@ function showSelectionPopup(selection: Selection): void {
     left: `${Math.max(10, left)}px`,
   });
 
-  popup.querySelectorAll<HTMLButtonElement>('.ai-popup-btn').forEach((btn) => {
+  popup.querySelectorAll<HTMLButtonElement>('.ai-popup-btn[data-action]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const action = btn.dataset.action;
       if (action === 'explain' || action === 'translate' || action === 'summarize') {
         handleSelectionAction(action);
       }
+      hideSelectionPopup();
+    });
+  });
+
+  popup.querySelectorAll<HTMLButtonElement>('.ai-popup-btn[data-edit]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.edit;
+      if (mode === 'rewrite' || mode === 'grammar') handleInlineEdit(mode);
       hideSelectionPopup();
     });
   });

@@ -141,3 +141,31 @@ export const SearchIcon = (p: IconProps) => (
     <path d="m21 21-4.3-4.3" />
   </svg>
 );
+
+export const PlusIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+export const HistoryIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M3 3v5h5" />
+    <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+    <path d="M12 7v5l4 2" />
+  </svg>
+);
+
+export const MicIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="9" y="2" width="6" height="12" rx="3" />
+    <path d="M5 10a7 7 0 0 0 14 0M12 17v4" />
+  </svg>
+);
+
+export const SpeakerIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M11 5 6 9H2v6h4l5 4z" />
+    <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" />
+  </svg>
+);

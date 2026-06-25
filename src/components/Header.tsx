@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react';
+import { PlusIcon, HistoryIcon } from './icons';
 import { useSettings } from '@/store/settings';
 import { useChat } from '@/store/chat';
 import { useT } from '@/hooks/useT';
@@ -9,10 +10,12 @@ const AiOrb = lazy(() => import('./AiOrb'));
 
 interface Props {
   onAvatarClick: () => void;
+  onNewChat: () => void;
+  onToggleThreads: () => void;
 }
 
 /** Top bar: brand on the left, user avatar (opens the menu) on the right. */
-export default function Header({ onAvatarClick }: Props) {
+export default function Header({ onAvatarClick, onNewChat, onToggleThreads }: Props) {
   const t = useT();
   const name = useSettings((s) => s.name);
   const isLoading = useChat((s) => s.isLoading);
@@ -32,6 +35,17 @@ export default function Header({ onAvatarClick }: Props) {
         </div>
       </div>
       <div className="header-actions">
+        <button className="btn" onClick={onNewChat} title={t('newChat')} aria-label={t('newChat')}>
+          <PlusIcon />
+        </button>
+        <button
+          className="btn"
+          onClick={onToggleThreads}
+          title={t('threads')}
+          aria-label={t('threads')}
+        >
+          <HistoryIcon />
+        </button>
         <button className="avatar-btn" onClick={onAvatarClick} title={name.trim() || t('you')}>
           <span className="avatar">{initials(name)}</span>
         </button>

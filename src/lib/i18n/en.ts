@@ -14,6 +14,8 @@ export const en = {
   actExplain: 'Explain',
   actTranslate: 'Translate',
   actSummarize: 'Summarize',
+  actRewrite: 'Rewrite',
+  actFixGrammar: 'Fix',
   attachImage: 'Attach image',
   attachScreenshot: 'Capture screenshot',
   attachRemove: 'Remove image',
@@ -66,6 +68,13 @@ export const en = {
   cmdPlaceholder: 'Type a command or search…',
   cmdEmpty: 'No matching commands',
   cmdToggleTheme: 'Toggle light / dark',
+  newChat: 'New chat',
+  threads: 'Chats',
+  untitled: 'New chat',
+  deleteChatConfirm: 'Delete this chat?',
+  dictate: 'Voice input',
+  listen: 'Read aloud',
+  stopListen: 'Stop reading',
 };
 
 export type TranslationKey = keyof typeof en;

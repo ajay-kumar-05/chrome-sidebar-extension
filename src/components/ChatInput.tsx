@@ -1,8 +1,19 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { SendIcon, StopIcon, ImageIcon, CameraIcon, CloseIcon, PaperclipIcon } from './icons';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  SendIcon,
+  StopIcon,
+  ImageIcon,
+  CameraIcon,
+  CloseIcon,
+  PaperclipIcon,
+  MicIcon,
+} from './icons';
 import { useChat } from '@/store/chat';
+import { useSettings } from '@/store/settings';
 import { useT } from '@/hooks/useT';
 import { captureRegion, isExtension } from '@/lib/messaging';
+import { matchSlash, expandSlash } from '@/lib/prompts';
+import { getRecognitionCtor, transcriptOf, SPEECH_LANG, type SpeechRecognitionLike } from '@/lib/speech';
 
 interface Props {
   onSend: (text: string, images?: string[]) => void;
@@ -27,13 +38,28 @@ function fileToDataUrl(file: File): Promise<string> {
 export default function ChatInput({ onSend, onStop }: Props) {
   const t = useT();
   const isLoading = useChat((s) => s.isLoading);
+  const lang = useSettings((s) => s.lang);
   const [value, setValue] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [capturing, setCapturing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashDismissed, setSlashDismissed] = useState(false);
+  const [listening, setListening] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const attachRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+
+  // Slash autocomplete is open while typing a "/command" token (no space yet).
+  const slashToken = value.startsWith('/') && !value.includes(' ') ? value : '';
+  const slashMatches = useMemo(
+    () => (slashToken && !slashDismissed ? matchSlash(slashToken) : []),
+    [slashToken, slashDismissed],
+  );
+  const slashOpen = slashMatches.length > 0;
+
+  const speechSupported = useMemo(() => !!getRecognitionCtor(), []);
 
   // Close the attachment dropdown on outside-click or Escape.
   useEffect(() => {
@@ -51,6 +77,9 @@ export default function ChatInput({ onSend, onStop }: Props) {
       document.removeEventListener('keydown', onEsc);
     };
   }, [menuOpen]);
+
+  // Stop dictation if the component unmounts mid-listen.
+  useEffect(() => () => recognitionRef.current?.stop(), []);
 
   const autoGrow = () => {
     const el = ref.current;
@@ -96,16 +125,74 @@ export default function ChatInput({ onSend, onStop }: Props) {
 
   const removeImage = (i: number) => setImages((prev) => prev.filter((_, idx) => idx !== i));
 
+  const selectSlash = (cmd: string) => {
+    setValue(`${cmd} `);
+    setSlashDismissed(true);
+    requestAnimationFrame(() => {
+      ref.current?.focus();
+      autoGrow();
+    });
+  };
+
+  const toggleMic = () => {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const Ctor = getRecognitionCtor();
+    if (!Ctor) return;
+    const recognition = new Ctor();
+    recognition.lang = SPEECH_LANG[lang];
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    const base = value ? `${value} ` : '';
+    recognition.onresult = (e) => setValue(base + transcriptOf(e));
+    recognition.onend = () => {
+      setListening(false);
+      recognitionRef.current = null;
+      requestAnimationFrame(autoGrow);
+    };
+    recognition.onerror = () => recognition.stop();
+    recognitionRef.current = recognition;
+    setListening(true);
+    recognition.start();
+  };
+
   const submit = () => {
     const text = value.trim();
     if ((!text && !images.length) || isLoading) return;
-    onSend(text, images.length ? images : undefined);
+    const selected = useChat.getState().selectedText;
+    const toSend = expandSlash(text, selected) ?? text;
+    onSend(toSend, images.length ? images : undefined);
     setValue('');
     setImages([]);
+    setSlashDismissed(false);
     requestAnimationFrame(autoGrow);
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (slashOpen) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSlashIndex((i) => Math.min(i + 1, slashMatches.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSlashIndex((i) => Math.max(i - 1, 0));
+        return;
+      }
+      if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+        e.preventDefault();
+        selectSlash(slashMatches[slashIndex]?.cmd ?? slashMatches[0].cmd);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSlashDismissed(true);
+        return;
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       submit();
@@ -145,6 +232,21 @@ export default function ChatInput({ onSend, onStop }: Props) {
         />
 
         <div className="attach-wrap" ref={attachRef}>
+          {slashOpen && (
+            <div className="slash-menu" role="listbox">
+              {slashMatches.map((c, i) => (
+                <button
+                  key={c.cmd}
+                  className={`slash-item${i === slashIndex ? ' active' : ''}`}
+                  onMouseEnter={() => setSlashIndex(i)}
+                  onClick={() => selectSlash(c.cmd)}
+                >
+                  <span className="slash-cmd">{c.cmd}</span>
+                  <span className="slash-desc">{c.desc}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <button
             className="attach-btn"
             onClick={() => setMenuOpen((o) => !o)}
@@ -180,10 +282,25 @@ export default function ChatInput({ onSend, onStop }: Props) {
           disabled={isLoading}
           onChange={(e) => {
             setValue(e.target.value);
+            setSlashDismissed(false);
+            setSlashIndex(0);
             autoGrow();
           }}
           onKeyDown={onKeyDown}
         />
+
+        {speechSupported && (
+          <button
+            className={`mic-btn${listening ? ' listening' : ''}`}
+            onClick={toggleMic}
+            disabled={isLoading}
+            title={t('dictate')}
+            aria-label={t('dictate')}
+          >
+            <MicIcon />
+          </button>
+        )}
+
         {isLoading ? (
           <button className="send-btn" onClick={onStop} title={t('stop')} aria-label={t('stop')}>
             <StopIcon />

@@ -135,6 +135,17 @@ export async function captureRegion(): Promise<RegionCaptureResult> {
   }
 }
 
+/** Send rewritten/corrected text to the active tab to replace the selection in place. */
+export async function applyInlineEdit(text: string): Promise<void> {
+  const tab = await activeTab();
+  if (!tab?.id) return;
+  try {
+    await chrome.tabs.sendMessage(tab.id, { action: 'applyInlineEdit', text } satisfies RuntimeMessage);
+  } catch {
+    /* no content script in the tab */
+  }
+}
+
 /** Subscribe to runtime messages addressed to the sidebar. Returns an unsubscribe fn. */
 export function onRuntimeMessage(handler: (msg: BroadcastMessage) => void): () => void {
   if (!isExtension()) return () => {};

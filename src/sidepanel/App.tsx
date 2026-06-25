@@ -13,7 +13,7 @@ export default function App() {
   const lang = useSettings((s) => s.lang);
   const configured = !!apiKey;
 
-  const { send, handleAction, stop } = useChatController();
+  const { send, handleAction, stop, runInlineEdit } = useChatController();
   const setSelectedText = useChat((s) => s.setSelectedText);
   const setCurrentPage = useChat((s) => s.setCurrentPage);
 
@@ -39,6 +39,9 @@ export default function App() {
         case 'pageChanged':
           setCurrentPage({ url: msg.pageUrl ?? '', title: msg.title ?? '' });
           break;
+        case 'inlineEdit':
+          void runInlineEdit(msg.mode, msg.text);
+          break;
       }
     });
 
@@ -49,7 +52,7 @@ export default function App() {
     });
 
     return unsubscribe;
-  }, [configured, handleAction, setSelectedText, setCurrentPage, lang]);
+  }, [configured, handleAction, runInlineEdit, setSelectedText, setCurrentPage, lang]);
 
   return configured ? (
     <Sidebar onSend={send} onStop={stop} onAction={handleAction} />

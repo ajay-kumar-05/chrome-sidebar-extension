@@ -6,6 +6,8 @@ import ChatInput from './ChatInput';
 import UserMenu from './UserMenu';
 import SettingsModal from './SettingsModal';
 import CommandPalette from './CommandPalette';
+import ThreadPanel from './ThreadPanel';
+import { useChat } from '@/store/chat';
 import type { QuickAction } from '@/lib/types';
 
 interface Props {
@@ -19,6 +21,8 @@ export default function Sidebar({ onSend, onStop, onAction }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [threadsOpen, setThreadsOpen] = useState(false);
+  const newConversation = useChat((s) => s.newConversation);
 
   // ⌘K / Ctrl+K toggles the command palette.
   useEffect(() => {
@@ -34,13 +38,18 @@ export default function Sidebar({ onSend, onStop, onAction }: Props) {
 
   return (
     <div className="container">
-      <Header onAvatarClick={() => setMenuOpen(true)} />
+      <Header
+        onAvatarClick={() => setMenuOpen(true)}
+        onNewChat={() => newConversation()}
+        onToggleThreads={() => setThreadsOpen((o) => !o)}
+      />
       <MessageList onAction={onAction} />
       <ChatInput onSend={onSend} onStop={onStop} />
 
       {menuOpen && (
         <UserMenu onClose={() => setMenuOpen(false)} onOpenSettings={() => setSettingsOpen(true)} />
       )}
+      {threadsOpen && <ThreadPanel onClose={() => setThreadsOpen(false)} />}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
 
       <AnimatePresence>

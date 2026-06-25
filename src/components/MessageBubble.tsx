@@ -1,8 +1,10 @@
-import { BotIcon } from './icons';
+import { useEffect, useState } from 'react';
+import { BotIcon, SpeakerIcon } from './icons';
 import Markdown from './Markdown';
 import { useSettings } from '@/store/settings';
 import { useT } from '@/hooks/useT';
 import { initials, timeLabel } from '@/lib/format';
+import { speak, stopSpeaking, ttsSupported } from '@/lib/speech';
 import type { Message } from '@/lib/types';
 
 interface Props {
@@ -15,8 +17,24 @@ interface Props {
 export default function MessageBubble({ message, streaming }: Props) {
   const t = useT();
   const name = useSettings((s) => s.name);
+  const lang = useSettings((s) => s.lang);
+  const [speaking, setSpeaking] = useState(false);
   const isUser = message.role === 'user';
   const who = isUser ? name.trim() || t('you') : t('assistant');
+  const canSpeak = !isUser && !streaming && ttsSupported() && !!message.content;
+
+  // Stop any in-progress speech if this bubble unmounts.
+  useEffect(() => () => stopSpeaking(), []);
+
+  const toggleSpeak = () => {
+    if (speaking) {
+      stopSpeaking();
+      setSpeaking(false);
+    } else {
+      speak(message.content, lang, () => setSpeaking(false));
+      setSpeaking(true);
+    }
+  };
 
   return (
     <div className={`message ${message.role}`}>
@@ -24,6 +42,16 @@ export default function MessageBubble({ message, streaming }: Props) {
       <div className="message-col">
         <div className="message-meta">
           {who} · {timeLabel(message.timestamp)}
+          {canSpeak && (
+            <button
+              className={`speak-btn${speaking ? ' on' : ''}`}
+              onClick={toggleSpeak}
+              title={speaking ? t('stopListen') : t('listen')}
+              aria-label={speaking ? t('stopListen') : t('listen')}
+            >
+              <SpeakerIcon />
+            </button>
+          )}
         </div>
         <div className="message-bubble">
           {message.images?.length ? (
