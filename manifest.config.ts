@@ -8,7 +8,7 @@ import pkg from './package.json';
  */
 export default defineManifest({
   manifest_version: 3,
-  name: 'AI Sidebar Assistant',
+  name: 'AI Assistant',
   version: pkg.version,
   description: pkg.description,
   permissions: ['activeTab', 'storage', 'sidePanel', 'contextMenus', 'scripting', 'tabs'],
@@ -33,7 +33,7 @@ export default defineManifest({
     extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
   },
   action: {
-    default_title: 'Open AI Sidebar',
+    default_title: 'Open AI Assistant',
   },
   icons: {
     16: 'icons/icon16.png',

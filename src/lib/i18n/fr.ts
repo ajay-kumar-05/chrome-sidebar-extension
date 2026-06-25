@@ -1,7 +1,7 @@
 import type { Dict } from './en';
 
 export const fr: Dict = {
-  appName: 'Barre IA',
+  appName: 'Assistant IA',
   tagline: 'Votre copilote de navigation',
   online: 'En ligne',
   welcomeTitle: 'Comment puis-je aider ?',
@@ -59,7 +59,7 @@ export const fr: Dict = {
     "Je n'ai pas pu lire cette page. C'est peut-être une page protégée (comme chrome:// ou la page des extensions). Ouvrez un site web normal et réessayez.",
   ctxHeading: 'Actualisez pour connecter',
   ctxMessage:
-    'Cette page était ouverte avant le chargement d’AI Sidebar, je ne peux donc pas la lire. Actualisez la page pour activer l’IA ici.',
+    'Cette page était ouverte avant le chargement d’Assistant IA, je ne peux donc pas la lire. Actualisez la page pour activer l’IA ici.',
   ctxRefresh: 'Actualiser la page',
   errAuth:
     "⚠️ Échec de l'authentification. Vérifiez votre clé API dans les Paramètres, puis réessayez.",

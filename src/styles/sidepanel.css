@@ -1365,32 +1365,6 @@ button {
   }
 }
 
-/* ---- AI orb (three.js) ---- */
-.logo-orb {
-  background: transparent !important;
-  box-shadow: none !important;
-  overflow: visible;
-}
-.logo-orb canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-.welcome-orb {
-  width: 104px;
-  height: 104px;
-  margin: 0 auto 14px;
-  filter: drop-shadow(0 18px 30px rgba(99, 102, 241, 0.45));
-}
-.welcome-orb canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-.orb-fallback {
-  background: var(--gradient);
-  border-radius: 50%;
-  animation: float 5s ease-in-out infinite;
-}
-
 /* ---- Command palette (⌘K) ---- */
 .cmdk-overlay {
   position: fixed;

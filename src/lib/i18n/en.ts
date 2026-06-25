@@ -1,6 +1,6 @@
 /** English is the source of truth: its keys define the TranslationKey type. */
 export const en = {
-  appName: 'AI Sidebar',
+  appName: 'AI Assistant',
   tagline: 'Your browsing copilot',
   online: 'Online',
   welcomeTitle: 'How can I help?',
@@ -58,7 +58,7 @@ export const en = {
     "I couldn't read this page. It may be a protected page (like chrome:// or the extensions page). Open a normal website and try again.",
   ctxHeading: 'Refresh to connect',
   ctxMessage:
-    'This page was open before AI Sidebar loaded, so I can’t read it yet. Refresh the page to enable AI here.',
+    'This page was open before AI Assistant loaded, so I can’t read it yet. Refresh the page to enable AI here.',
   ctxRefresh: 'Refresh page',
   errAuth: '⚠️ Authentication failed. Check your API key in Settings, then try again.',
   errRate: '⚠️ Rate limit reached. Wait a moment and try again.',

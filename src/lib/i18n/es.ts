@@ -1,7 +1,7 @@
 import type { Dict } from './en';
 
 export const es: Dict = {
-  appName: 'Barra IA',
+  appName: 'Asistente IA',
   tagline: 'Tu copiloto de navegación',
   online: 'En línea',
   welcomeTitle: '¿Cómo puedo ayudar?',
@@ -59,7 +59,7 @@ export const es: Dict = {
     'No pude leer esta página. Puede ser una página protegida (como chrome:// o la página de extensiones). Abre un sitio web normal e inténtalo de nuevo.',
   ctxHeading: 'Actualiza para conectar',
   ctxMessage:
-    'Esta página estaba abierta antes de que se cargara AI Sidebar, así que aún no puedo leerla. Actualiza la página para habilitar la IA aquí.',
+    'Esta página estaba abierta antes de que se cargara Asistente IA, así que aún no puedo leerla. Actualiza la página para habilitar la IA aquí.',
   ctxRefresh: 'Actualizar página',
   errAuth: '⚠️ Error de autenticación. Comprueba tu clave API en Ajustes e inténtalo de nuevo.',
   errRate: '⚠️ Límite de solicitudes alcanzado. Espera un momento e inténtalo de nuevo.',
