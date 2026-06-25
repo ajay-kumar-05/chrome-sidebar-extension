@@ -27,6 +27,11 @@ export default defineManifest({
   side_panel: {
     default_path: 'index.html',
   },
+  // 'wasm-unsafe-eval' lets transformers.js run the on-device embedding model
+  // (WebAssembly) on the side-panel page for local "chat with page" retrieval.
+  content_security_policy: {
+    extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+  },
   action: {
     default_title: 'Open AI Sidebar',
   },

@@ -7,6 +7,7 @@ import {
   CloseIcon,
   PaperclipIcon,
   MicIcon,
+  DocIcon,
 } from './icons';
 import { useChat } from '@/store/chat';
 import { useSettings } from '@/store/settings';
@@ -38,6 +39,8 @@ function fileToDataUrl(file: File): Promise<string> {
 export default function ChatInput({ onSend, onStop }: Props) {
   const t = useT();
   const isLoading = useChat((s) => s.isLoading);
+  const pageGrounding = useChat((s) => s.pageGrounding);
+  const setPageGrounding = useChat((s) => s.setPageGrounding);
   const lang = useSettings((s) => s.lang);
   const [value, setValue] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -203,6 +206,18 @@ export default function ChatInput({ onSend, onStop }: Props) {
 
   return (
     <div className="input-section">
+      {isExtension() && (
+        <button
+          className={`page-toggle${pageGrounding ? ' on' : ''}`}
+          onClick={() => setPageGrounding(!pageGrounding)}
+          title={t('pageChat')}
+          aria-pressed={pageGrounding}
+        >
+          <DocIcon />
+          {t('pageChat')}
+        </button>
+      )}
+
       {images.length > 0 && (
         <div className="attach-row">
           {images.map((src, i) => (

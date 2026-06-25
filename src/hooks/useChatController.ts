@@ -3,6 +3,7 @@ import { useChat, activeMessages } from '@/store/chat';
 import { useSettings } from '@/store/settings';
 import { buildActionPrompt, sendChat } from '@/lib/ai';
 import { applyInlineEdit, fetchLatestSelection, fetchPageContent } from '@/lib/messaging';
+import { retrieve } from '@/lib/rag';
 import { t } from '@/lib/i18n';
 import { AuthError, NetworkError, RateLimitError, isAbortError } from '@/lib/errors';
 import { MAX_PAGE_TEXT, REQUEST_TIMEOUT_MS } from '@/lib/constants';
@@ -105,15 +106,44 @@ export function useChatController() {
     [addMessage],
   );
 
+  /** Answer a question grounded in the current page via on-device retrieval. */
+  const runGrounded = useCallback(
+    async (query: string) => {
+      setLoading(true);
+      const page = await fetchPageContent();
+      if (!page?.text?.trim()) {
+        await runAI();
+        return;
+      }
+      try {
+        const chunks = await retrieve(page.url, page.text.slice(0, 200_000), query, 5);
+        if (!chunks.length) {
+          await runAI(`Page content:\n${page.text.slice(0, MAX_PAGE_TEXT)}`);
+          return;
+        }
+        const context =
+          `Answer using these excerpts from the page the user is viewing. ` +
+          `If the answer isn't in them, say so.\n\nPage: ${page.title} (${page.url})\n\n` +
+          chunks.map((c, i) => `[Excerpt ${i + 1}]\n${c}`).join('\n\n');
+        await runAI(context);
+      } catch {
+        // Embedding unavailable (offline / model blocked) — fall back to raw text.
+        await runAI(`Page content:\n${page.text.slice(0, MAX_PAGE_TEXT)}`);
+      }
+    },
+    [runAI, setLoading],
+  );
+
   /** Send a free-form user message. */
   const send = useCallback(
     (text: string, images?: string[]) => {
       const content = text.trim();
       if ((!content && !images?.length) || useChat.getState().isLoading) return;
       addMessage({ role: 'user', content, images });
-      void runAI();
+      if (useChat.getState().pageGrounding && content) void runGrounded(content);
+      else void runAI();
     },
-    [addMessage, runAI],
+    [addMessage, runAI, runGrounded],
   );
 
   /** Summarize the active browser tab's content. */

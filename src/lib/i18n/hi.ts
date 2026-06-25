@@ -76,4 +76,5 @@ export const hi: Dict = {
   dictate: 'वॉइस इनपुट',
   listen: 'पढ़कर सुनाएँ',
   stopListen: 'पढ़ना रोकें',
+  pageChat: 'पेज से चैट करें',
 };

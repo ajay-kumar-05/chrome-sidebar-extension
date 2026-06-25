@@ -76,4 +76,5 @@ export const es: Dict = {
   dictate: 'Entrada de voz',
   listen: 'Leer en voz alta',
   stopListen: 'Detener lectura',
+  pageChat: 'Chatear con la página',
 };

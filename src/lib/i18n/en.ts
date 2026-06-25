@@ -75,6 +75,7 @@ export const en = {
   dictate: 'Voice input',
   listen: 'Read aloud',
   stopListen: 'Stop reading',
+  pageChat: 'Chat with page',
 };
 
 export type TranslationKey = keyof typeof en;

@@ -35,6 +35,8 @@ export interface ChatState {
   isLoading: boolean;
   selectedText: string;
   currentPage: Pick<PageContext, 'title' | 'url'> | null;
+  /** When true, messages are answered using retrieved page context (RAG). */
+  pageGrounding: boolean;
 
   /** Append a message to the active conversation; returns its generated id. */
   addMessage: (
@@ -47,6 +49,7 @@ export interface ChatState {
   setLoading: (loading: boolean) => void;
   setSelectedText: (text: string) => void;
   setCurrentPage: (page: Pick<PageContext, 'title' | 'url'> | null) => void;
+  setPageGrounding: (on: boolean) => void;
   /** Empty the active conversation (keeps the thread). */
   clear: () => void;
   /** Start a fresh conversation and switch to it. */
@@ -76,6 +79,7 @@ export const useChat = create<ChatState>()(
       isLoading: false,
       selectedText: '',
       currentPage: null,
+      pageGrounding: false,
 
       addMessage: ({ role, content, images }) => {
         const id = newId();
@@ -112,6 +116,7 @@ export const useChat = create<ChatState>()(
       setLoading: (isLoading) => set({ isLoading }),
       setSelectedText: (selectedText) => set({ selectedText }),
       setCurrentPage: (currentPage) => set({ currentPage }),
+      setPageGrounding: (pageGrounding) => set({ pageGrounding }),
 
       clear: () =>
         set((state) => ({

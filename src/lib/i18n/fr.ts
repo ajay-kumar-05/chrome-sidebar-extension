@@ -79,4 +79,5 @@ export const fr: Dict = {
   dictate: 'Saisie vocale',
   listen: 'Lire à voix haute',
   stopListen: 'Arrêter la lecture',
+  pageChat: 'Discuter avec la page',
 };

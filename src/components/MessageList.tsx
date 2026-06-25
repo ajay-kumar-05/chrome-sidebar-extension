@@ -23,7 +23,10 @@ export default function MessageList({ onAction }: Props) {
   // hide it and show the typing indicator in its place during that window.
   const visible = messages.filter((m) => !(m.role === 'assistant' && m.content === ''));
   const last = messages[messages.length - 1];
-  const awaitingFirstToken = isLoading && last?.role === 'assistant' && last.content === '';
+  // Show the typing indicator while waiting on the request (last msg is the
+  // user's, e.g. during page-context retrieval) or before the first token.
+  const awaitingFirstToken =
+    isLoading && (last?.role === 'user' || (last?.role === 'assistant' && last.content === ''));
   // The last assistant message is "streaming" once it has content while loading.
   const streamingId =
     isLoading && last?.role === 'assistant' && last.content !== '' ? last.id : null;

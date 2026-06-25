@@ -1682,3 +1682,33 @@ button {
 .speak-btn.on {
   color: var(--brand-1);
 }
+
+/* ---- Page-grounding (chat with page) toggle ---- */
+.page-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 6px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--elevated);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s var(--ease);
+}
+.page-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+.page-toggle:hover {
+  border-color: color-mix(in srgb, var(--brand-1) 45%, transparent);
+  color: var(--text);
+}
+.page-toggle.on {
+  background: var(--gradient-soft);
+  border-color: color-mix(in srgb, var(--brand-1) 45%, transparent);
+  color: var(--brand-1);
+}
