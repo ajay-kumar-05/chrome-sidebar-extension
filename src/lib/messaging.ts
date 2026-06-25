@@ -1,7 +1,8 @@
-import type { LangCode, PageContext, RuntimeMessage } from './types';
+import type { BroadcastMessage, LangCode, PageContext, RuntimeMessage } from './types';
+import { STORAGE_KEYS } from './constants';
 
 /** Storage key the content script reads to localize the in-page popup. */
-export const LANG_STORAGE_KEY = 'ai-sidebar-lang';
+export const LANG_STORAGE_KEY = STORAGE_KEYS.lang;
 
 /** True when running inside the extension (vs. the plain `vite` web preview). */
 export const isExtension = (): boolean =>
@@ -16,6 +17,17 @@ export function isRestrictedUrl(url?: string): boolean {
   );
 }
 
+/** The active tab in the current window, or null if unavailable. */
+async function activeTab(): Promise<chrome.tabs.Tab | null> {
+  if (!isExtension()) return null;
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tab ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Mirror the "configured" state to chrome.storage so the content script (which
  * can't read the side panel's localStorage) knows whether to show the in-page
@@ -23,11 +35,7 @@ export function isRestrictedUrl(url?: string): boolean {
  */
 export function syncConfigured(configured: boolean): void {
   if (!isExtension()) return;
-  try {
-    chrome.storage.local.set({ 'ai-sidebar-configured': configured });
-  } catch {
-    /* storage unavailable */
-  }
+  void chrome.storage.local.set({ [STORAGE_KEYS.configured]: configured }).catch(() => {});
 }
 
 /**
@@ -36,39 +44,28 @@ export function syncConfigured(configured: boolean): void {
  */
 export function syncLang(lang: LangCode): void {
   if (!isExtension()) return;
-  try {
-    chrome.storage.local.set({ [LANG_STORAGE_KEY]: lang });
-  } catch {
-    /* storage unavailable */
-  }
+  void chrome.storage.local.set({ [STORAGE_KEYS.lang]: lang }).catch(() => {});
 }
 
 /** Open the side panel for the active tab (called from in-page actions). */
 export function openSidePanel(): void {
   if (!isExtension()) return;
-  chrome.runtime.sendMessage({ action: 'openSidePanel' } satisfies RuntimeMessage);
+  void chrome.runtime.sendMessage({ action: 'openSidePanel' } satisfies RuntimeMessage);
 }
 
 /**
  * Capture the visible area of the active tab as a PNG data URL.
  * Resolves to null on restricted pages (chrome://, web store, …) or on error.
  */
-export function captureVisibleTab(): Promise<string | null> {
-  return new Promise((resolve) => {
-    if (!isExtension()) return resolve(null);
-    try {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const tab = tabs?.[0];
-        if (!tab || isRestrictedUrl(tab.url)) return resolve(null);
-        chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, (dataUrl) => {
-          if (chrome.runtime.lastError || !dataUrl) return resolve(null);
-          resolve(dataUrl);
-        });
-      });
-    } catch {
-      resolve(null);
-    }
-  });
+export async function captureVisibleTab(): Promise<string | null> {
+  const tab = await activeTab();
+  if (!tab || isRestrictedUrl(tab.url)) return null;
+  try {
+    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+    return dataUrl ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export interface RegionRect {
@@ -110,54 +107,38 @@ function cropImage(dataUrl: string, sx: number, sy: number, sw: number, sh: numb
  * Let the user drag-select a region on the active tab, then capture & crop just
  * that region. Coordinates the content-script overlay with captureVisibleTab.
  */
-export function captureRegion(): Promise<RegionCaptureResult> {
-  return new Promise((resolve) => {
-    if (!isExtension()) return resolve({ image: null, unavailable: true });
-    try {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const tab = tabs?.[0];
-        if (!tab?.id || isRestrictedUrl(tab.url)) {
-          return resolve({ image: null, unavailable: true });
-        }
-        chrome.tabs.sendMessage(
-          tab.id,
-          { action: 'startRegionCapture' },
-          async (res: { rect?: RegionRect; dpr?: number; cancelled?: boolean } | undefined) => {
-            if (chrome.runtime.lastError || !res) {
-              return resolve({ image: null, unavailable: true });
-            }
-            if (res.cancelled || !res.rect) {
-              return resolve({ image: null, cancelled: true });
-            }
-            const full = await captureVisibleTab();
-            if (!full) return resolve({ image: null, unavailable: true });
-            const dpr = res.dpr || 1;
-            const { left, top, width, height } = res.rect;
-            try {
-              const cropped = await cropImage(
-                full,
-                left * dpr,
-                top * dpr,
-                width * dpr,
-                height * dpr,
-              );
-              resolve({ image: cropped });
-            } catch {
-              resolve({ image: null, unavailable: true });
-            }
-          },
-        );
-      });
-    } catch {
-      resolve({ image: null, unavailable: true });
-    }
-  });
+export async function captureRegion(): Promise<RegionCaptureResult> {
+  const tab = await activeTab();
+  if (!tab?.id || isRestrictedUrl(tab.url)) return { image: null, unavailable: true };
+
+  let res: { rect?: RegionRect; dpr?: number; cancelled?: boolean } | undefined;
+  try {
+    res = await chrome.tabs.sendMessage(tab.id, {
+      action: 'startRegionCapture',
+    } satisfies RuntimeMessage);
+  } catch {
+    return { image: null, unavailable: true };
+  }
+  if (!res) return { image: null, unavailable: true };
+  if (res.cancelled || !res.rect) return { image: null, cancelled: true };
+
+  const full = await captureVisibleTab();
+  if (!full) return { image: null, unavailable: true };
+
+  const dpr = res.dpr || 1;
+  const { left, top, width, height } = res.rect;
+  try {
+    const cropped = await cropImage(full, left * dpr, top * dpr, width * dpr, height * dpr);
+    return { image: cropped };
+  } catch {
+    return { image: null, unavailable: true };
+  }
 }
 
 /** Subscribe to runtime messages addressed to the sidebar. Returns an unsubscribe fn. */
-export function onRuntimeMessage(handler: (msg: RuntimeMessage) => void): () => void {
+export function onRuntimeMessage(handler: (msg: BroadcastMessage) => void): () => void {
   if (!isExtension()) return () => {};
-  const listener = (msg: RuntimeMessage) => {
+  const listener = (msg: BroadcastMessage) => {
     if (msg.target && msg.target !== 'sidebar') return;
     handler(msg);
   };
@@ -166,52 +147,42 @@ export function onRuntimeMessage(handler: (msg: RuntimeMessage) => void): () => 
 }
 
 /** Read the active tab's title/url/text via an injected script. */
-export function fetchPageContent(): Promise<PageContext | null> {  return new Promise((resolve) => {
-    if (!isExtension()) return resolve(null);
-    try {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const tab = tabs?.[0];
-        if (!tab?.id || isRestrictedUrl(tab.url)) return resolve(null);
-        chrome.scripting.executeScript(
-          {
-            target: { tabId: tab.id },
-            func: () => ({
-              title: document.title,
-              url: location.href,
-              text: document.body ? document.body.innerText : '',
-            }),
-          },
-          (results) => {
-            if (chrome.runtime.lastError || !results?.[0]) {
-              return resolve({ title: tab.title ?? '', url: tab.url ?? '', text: '' });
-            }
-            resolve(results[0].result as PageContext);
-          },
-        );
-      });
-    } catch {
-      resolve(null);
-    }
-  });
+export async function fetchPageContent(): Promise<PageContext | null> {
+  const tab = await activeTab();
+  if (!tab?.id || isRestrictedUrl(tab.url)) return null;
+  const fallback: PageContext = { title: tab.title ?? '', url: tab.url ?? '', text: '' };
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => ({
+        title: document.title,
+        url: location.href,
+        text: document.body ? document.body.innerText : '',
+      }),
+    });
+    return (results?.[0]?.result as PageContext) ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 /** Ask the background/content script for the most recent selection. */
-export function fetchLatestSelection(): Promise<string> {
-  return new Promise((resolve) => {
-    if (!isExtension()) return resolve('');
-    try {
-      chrome.runtime.sendMessage({ action: 'requestSelectedText' }, (res) => {
-        if (chrome.runtime.lastError || res === undefined) {
-          ensureActiveTabContext();
-          return resolve('');
-        }
-        resolve(res?.selectedText?.trim() ?? '');
-      });
-    } catch {
-      ensureActiveTabContext();
-      resolve('');
+export async function fetchLatestSelection(): Promise<string> {
+  if (!isExtension()) return '';
+  try {
+    const res = await chrome.runtime.sendMessage({
+      action: 'requestSelectedText',
+    } satisfies RuntimeMessage);
+    const selected = (res as { selectedText?: string } | undefined)?.selectedText;
+    if (selected === undefined) {
+      void ensureActiveTabContext();
+      return '';
     }
-  });
+    return selected.trim();
+  } catch {
+    void ensureActiveTabContext();
+    return '';
+  }
 }
 
 /**
@@ -219,26 +190,17 @@ export function fetchLatestSelection(): Promise<string> {
  * before the extension loaded), inject a "refresh to connect" banner.
  * Resolves true when the tab context is available.
  */
-export function ensureActiveTabContext(labels?: BannerLabels): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (!isExtension()) return resolve(false);
-    try {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const tab = tabs?.[0];
-        if (!tab?.id || isRestrictedUrl(tab.url)) return resolve(false);
-        chrome.tabs.sendMessage(tab.id, { action: 'ping' }, (res) => {
-          if (chrome.runtime.lastError || !res?.pong) {
-            if (labels) showRefreshBanner(tab.id!, labels);
-            resolve(false);
-          } else {
-            resolve(true);
-          }
-        });
-      });
-    } catch {
-      resolve(false);
-    }
-  });
+export async function ensureActiveTabContext(labels?: BannerLabels): Promise<boolean> {
+  const tab = await activeTab();
+  if (!tab?.id || isRestrictedUrl(tab.url)) return false;
+  try {
+    const res = await chrome.tabs.sendMessage(tab.id, { action: 'ping' } satisfies RuntimeMessage);
+    if ((res as { pong?: boolean } | undefined)?.pong) return true;
+  } catch {
+    /* no content script in the tab */
+  }
+  if (labels) showRefreshBanner(tab.id, labels);
+  return false;
 }
 
 export interface BannerLabels {
@@ -250,8 +212,8 @@ export interface BannerLabels {
 /** Inject a small top-right "refresh to connect" banner into the page. */
 export function showRefreshBanner(tabId: number, labels: BannerLabels): void {
   if (!isExtension()) return;
-  try {
-    chrome.scripting.executeScript({
+  void chrome.scripting
+    .executeScript({
       target: { tabId },
       args: [labels],
       func: (L: BannerLabels) => {
@@ -305,8 +267,8 @@ export function showRefreshBanner(tabId: number, labels: BannerLabels): void {
         card.querySelector('#ai-sb-x')?.addEventListener('click', () => card.remove());
         setTimeout(() => document.getElementById('ai-sidebar-refresh-banner')?.remove(), 20000);
       },
+    })
+    .catch(() => {
+      /* could not inject */
     });
-  } catch {
-    /* could not inject */
-  }
 }

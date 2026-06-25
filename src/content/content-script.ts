@@ -7,12 +7,8 @@ import './content.css';
 import { TRANSLATE_LANGS } from '@/lib/languages';
 import { t } from '@/lib/i18n';
 import { LANG_STORAGE_KEY } from '@/lib/messaging';
-import type { LangCode } from '@/lib/types';
-
-interface IncomingMessage {
-  action: string;
-  text?: string;
-}
+import { STORAGE_KEYS } from '@/lib/constants';
+import type { LangCode, QuickAction, RuntimeMessage } from '@/lib/types';
 
 let selectedText = '';
 let isConfigured = false;
@@ -22,14 +18,14 @@ let popupTimer: ReturnType<typeof setTimeout> | null = null;
 function init(): void {
   // Load the "configured" flag and keep it in sync with the sidebar.
   try {
-    chrome.storage?.local?.get(['ai-sidebar-configured', LANG_STORAGE_KEY], (res) => {
-      isConfigured = !!res?.['ai-sidebar-configured'];
+    chrome.storage?.local?.get([STORAGE_KEYS.configured, LANG_STORAGE_KEY], (res) => {
+      isConfigured = !!res?.[STORAGE_KEYS.configured];
       lang = (res?.[LANG_STORAGE_KEY] as LangCode) ?? 'en';
     });
     chrome.storage?.onChanged?.addListener((changes, area) => {
       if (area !== 'local') return;
-      if (changes['ai-sidebar-configured']) {
-        isConfigured = !!changes['ai-sidebar-configured'].newValue;
+      if (changes[STORAGE_KEYS.configured]) {
+        isConfigured = !!changes[STORAGE_KEYS.configured].newValue;
         if (!isConfigured) hideSelectionPopup();
       }
       if (changes[LANG_STORAGE_KEY]) {
@@ -55,7 +51,7 @@ function handleTextSelection(e: Event): void {
 
   if (text && text !== selectedText) {
     selectedText = text;
-    chrome.runtime.sendMessage({ action: 'setSelectedText', text });
+    chrome.runtime.sendMessage({ action: 'setSelectedText', text } satisfies RuntimeMessage);
     if (isConfigured && selection) showSelectionPopup(selection);
   } else if (!text) {
     selectedText = '';
@@ -64,7 +60,7 @@ function handleTextSelection(e: Event): void {
 }
 
 function handleMessage(
-  request: IncomingMessage,
+  request: RuntimeMessage,
   _sender: chrome.runtime.MessageSender,
   sendResponse: (response?: unknown) => void,
 ): boolean | void {
@@ -252,7 +248,9 @@ function createFloatingButton(): void {
     button.style.opacity = '0.9';
     button.style.transform = 'scale(1)';
   });
-  button.addEventListener('click', () => chrome.runtime.sendMessage({ action: 'openSidePanel' }));
+  button.addEventListener('click', () =>
+    chrome.runtime.sendMessage({ action: 'openSidePanel' } satisfies RuntimeMessage),
+  );
 
   document.body.appendChild(button);
 }
@@ -354,7 +352,10 @@ function showSelectionPopup(selection: Selection): void {
 
   popup.querySelectorAll<HTMLButtonElement>('.ai-popup-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      handleSelectionAction(btn.dataset.action ?? '');
+      const action = btn.dataset.action;
+      if (action === 'explain' || action === 'translate' || action === 'summarize') {
+        handleSelectionAction(action);
+      }
       hideSelectionPopup();
     });
   });
@@ -387,17 +388,25 @@ function hideSelectionPopup(): void {
   document.getElementById('ai-sidebar-selection-popup')?.remove();
 }
 
-function handleSelectionAction(action: string, targetLang?: string): void {
+function handleSelectionAction(action: QuickAction, targetLang?: string): void {
   if (!selectedText) return;
-  chrome.runtime.sendMessage({ action: 'openSidePanel' });
+  chrome.runtime.sendMessage({ action: 'openSidePanel' } satisfies RuntimeMessage);
+  const text = selectedText;
+  const pageUrl = window.location.href;
   // Give the side panel a moment to open before routing the action to it.
+  // Build per-branch so `action` narrows to a literal for the discriminated union.
   setTimeout(() => {
-    chrome.runtime.sendMessage({
-      action,
-      text: selectedText,
-      pageUrl: window.location.href,
-      targetLang: targetLang || undefined,
-    });
+    switch (action) {
+      case 'explain':
+        chrome.runtime.sendMessage({ action, text, pageUrl } satisfies RuntimeMessage);
+        break;
+      case 'translate':
+        chrome.runtime.sendMessage({ action, text, pageUrl, targetLang } satisfies RuntimeMessage);
+        break;
+      case 'summarize':
+        chrome.runtime.sendMessage({ action, text, pageUrl } satisfies RuntimeMessage);
+        break;
+    }
   }, 500);
 }
 

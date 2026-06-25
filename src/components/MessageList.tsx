@@ -19,7 +19,12 @@ export default function MessageList({ onAction }: Props) {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  const empty = messages.length === 0 && !isLoading;
+  // The assistant placeholder is empty until the first streamed token arrives;
+  // hide it and show the typing indicator in its place during that window.
+  const visible = messages.filter((m) => !(m.role === 'assistant' && m.content === ''));
+  const last = messages[messages.length - 1];
+  const awaitingFirstToken = isLoading && last?.role === 'assistant' && last.content === '';
+  const empty = visible.length === 0 && !isLoading;
 
   return (
     <div className="messages">
@@ -27,10 +32,10 @@ export default function MessageList({ onAction }: Props) {
         <Welcome onAction={onAction} />
       ) : (
         <>
-          {messages.map((m) => (
+          {visible.map((m) => (
             <MessageBubble key={m.id} message={m} />
           ))}
-          {isLoading && <TypingIndicator />}
+          {awaitingFirstToken && <TypingIndicator />}
         </>
       )}
       <div ref={endRef} />

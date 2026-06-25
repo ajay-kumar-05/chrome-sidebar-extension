@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { SendIcon, ImageIcon, CameraIcon, CloseIcon, PaperclipIcon } from './icons';
+import { SendIcon, StopIcon, ImageIcon, CameraIcon, CloseIcon, PaperclipIcon } from './icons';
 import { useChat } from '@/store/chat';
 import { useT } from '@/hooks/useT';
 import { captureRegion, isExtension } from '@/lib/messaging';
 
 interface Props {
   onSend: (text: string, images?: string[]) => void;
+  onStop: () => void;
 }
 
 /** Max attachments and per-image size (≈ before base64 inflation). */
@@ -23,7 +24,7 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 /** Auto-growing message composer. Enter sends, Shift+Enter inserts a newline. */
-export default function ChatInput({ onSend }: Props) {
+export default function ChatInput({ onSend, onStop }: Props) {
   const t = useT();
   const isLoading = useChat((s) => s.isLoading);
   const [value, setValue] = useState('');
@@ -183,14 +184,20 @@ export default function ChatInput({ onSend }: Props) {
           }}
           onKeyDown={onKeyDown}
         />
-        <button
-          className="send-btn"
-          onClick={submit}
-          disabled={isLoading || (!value.trim() && !images.length)}
-          title={t('send')}
-        >
-          <SendIcon />
-        </button>
+        {isLoading ? (
+          <button className="send-btn" onClick={onStop} title={t('stop')} aria-label={t('stop')}>
+            <StopIcon />
+          </button>
+        ) : (
+          <button
+            className="send-btn"
+            onClick={submit}
+            disabled={!value.trim() && !images.length}
+            title={t('send')}
+          >
+            <SendIcon />
+          </button>
+        )}
       </div>
       <div className="input-hint">{t('hint')}</div>
     </div>

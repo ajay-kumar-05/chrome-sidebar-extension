@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { LangCode, Theme } from '@/lib/types';
 import { syncConfigured, syncLang } from '@/lib/messaging';
+import { STORAGE_KEYS } from '@/lib/constants';
 
 export interface SettingsState {
   apiKey: string;
@@ -38,7 +39,7 @@ export const useSettings = create<SettingsState>()(
       },
     }),
     {
-      name: 'ai-sidebar-settings',
+      name: STORAGE_KEYS.settings,
       onRehydrateStorage: () => (state) => {
         // Keep the content script's "configured" flag in sync on load.
         if (state) syncConfigured(!!state.apiKey);

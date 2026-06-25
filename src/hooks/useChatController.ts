@@ -1,46 +1,90 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useChat } from '@/store/chat';
 import { useSettings } from '@/store/settings';
 import { buildActionPrompt, sendChat } from '@/lib/ai';
 import { fetchLatestSelection, fetchPageContent } from '@/lib/messaging';
 import { t } from '@/lib/i18n';
-import type { QuickAction } from '@/lib/types';
+import { AuthError, NetworkError, RateLimitError, isAbortError } from '@/lib/errors';
+import { MAX_PAGE_TEXT, REQUEST_TIMEOUT_MS } from '@/lib/constants';
+import type { LangCode, QuickAction } from '@/lib/types';
+
+/** Localized, user-facing message for a typed AI error. */
+function messageForError(err: unknown, lang: LangCode): string {
+  if (err instanceof AuthError) return t(lang, 'errAuth');
+  if (err instanceof RateLimitError) return t(lang, 'errRate');
+  if (err instanceof NetworkError) return t(lang, 'errNetwork');
+  return t(lang, 'errGeneric');
+}
 
 /**
  * Central chat logic shared by the input, suggestions and the runtime listener.
- * Mirrors the behaviour of the original vanilla `AISidebar` send pipeline.
+ * Streams replies token-by-token and supports cancellation + request timeouts.
  */
 export function useChatController() {
   const addMessage = useChat((s) => s.addMessage);
+  const updateMessage = useChat((s) => s.updateMessage);
+  const removeMessage = useChat((s) => s.removeMessage);
   const setLoading = useChat((s) => s.setLoading);
+
+  // The in-flight request's controller, so the UI can cancel it.
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Abort any in-flight request if the panel unmounts.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   /** Run the model against the current conversation, plus optional one-off context. */
   const runAI = useCallback(
     async (contextText?: string) => {
       const { apiKey, baseUrl, model, lang } = useSettings.getState();
+
+      // Snapshot the conversation *before* adding the placeholder, so the empty
+      // assistant bubble we stream into isn't itself sent to the model.
+      const history = useChat.getState().messages;
+      const id = addMessage({ role: 'assistant', content: '' });
       setLoading(true);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]);
+
+      let acc = '';
       try {
-        const reply = await sendChat({
+        await sendChat({
           apiKey,
           baseUrl,
           model,
           lang,
-          messages: useChat.getState().messages,
+          messages: history,
           contextText,
+          signal,
+          onToken: (delta) => {
+            acc += delta;
+            updateMessage(id, acc);
+          },
         });
-        addMessage({ role: 'assistant', content: reply });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        addMessage({
-          role: 'assistant',
-          content: `⚠️ ${message}. Please verify your API key, base URL, and model in Settings, then try again.`,
-        });
+        if (isAbortError(error)) {
+          // User cancelled: keep any partial text, drop an empty bubble.
+          if (controller.signal.aborted) {
+            if (!acc) removeMessage(id);
+          } else {
+            // Combined signal aborted without a user cancel ⇒ timeout.
+            updateMessage(id, acc ? `${acc}\n\n${t(lang, 'errNetwork')}` : t(lang, 'errNetwork'));
+          }
+        } else {
+          const msg = messageForError(error, lang);
+          updateMessage(id, acc ? `${acc}\n\n${msg}` : msg);
+        }
       } finally {
+        abortRef.current = null;
         setLoading(false);
       }
     },
-    [addMessage, setLoading],
+    [addMessage, updateMessage, removeMessage, setLoading],
   );
+
+  /** Cancel the in-flight request, if any. */
+  const stop = useCallback(() => abortRef.current?.abort(), []);
 
   /** Send a free-form user message. */
   const send = useCallback(
@@ -62,7 +106,7 @@ export function useChatController() {
       addMessage({ role: 'assistant', content: t(lang, 'noPage') });
       return;
     }
-    const body = page.text.replace(/\n{3,}/g, '\n\n').slice(0, 12000);
+    const body = page.text.replace(/\n{3,}/g, '\n\n').slice(0, MAX_PAGE_TEXT);
     const context = `The user wants a summary of the web page they are currently viewing. Summarize it clearly with the main points as concise bullet points.\n\nPage title: ${page.title}\nPage URL: ${page.url}\n\nPage content:\n${body}`;
     await runAI(context);
   }, [addMessage, runAI]);
@@ -81,10 +125,7 @@ export function useChatController() {
       if ((action === 'explain' || action === 'translate') && !selected) {
         selected = await fetchLatestSelection();
         if (!selected) {
-          addMessage({
-            role: 'assistant',
-            content: 'No text is selected. Highlight some page text first, then retry.',
-          });
+          addMessage({ role: 'assistant', content: t(lang, 'errNoSelection') });
           return;
         }
       }
@@ -96,5 +137,5 @@ export function useChatController() {
     [addMessage, runAI, summarizePage],
   );
 
-  return { send, handleAction, summarizePage };
+  return { send, handleAction, summarizePage, stop };
 }

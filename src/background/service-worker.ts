@@ -76,7 +76,7 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
 });
 
 /** Broadcast a message tagged for the side panel surface. */
-function relayToSidebar(message: Omit<RuntimeMessage, 'target'>): void {
+function relayToSidebar(message: RuntimeMessage): void {
   chrome.runtime.sendMessage({ target: 'sidebar', ...message }).catch(() => {
     /* no receiver (side panel closed) — safe to ignore */
   });

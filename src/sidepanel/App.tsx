@@ -13,7 +13,7 @@ export default function App() {
   const lang = useSettings((s) => s.lang);
   const configured = !!apiKey;
 
-  const { send, handleAction } = useChatController();
+  const { send, handleAction, stop } = useChatController();
   const setSelectedText = useChat((s) => s.setSelectedText);
   const setCurrentPage = useChat((s) => s.setCurrentPage);
 
@@ -51,5 +51,9 @@ export default function App() {
     return unsubscribe;
   }, [configured, handleAction, setSelectedText, setCurrentPage, lang]);
 
-  return configured ? <Sidebar onSend={send} onAction={handleAction} /> : <SetupScreen />;
+  return configured ? (
+    <Sidebar onSend={send} onStop={stop} onAction={handleAction} />
+  ) : (
+    <SetupScreen />
+  );
 }

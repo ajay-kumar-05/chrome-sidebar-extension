@@ -30,6 +30,12 @@ export const SendIcon = (p: IconProps) => (
   </svg>
 );
 
+export const StopIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 export const SettingsIcon = (p: IconProps) => (
   <svg {...base} {...p}>
     <circle cx="12" cy="12" r="3" />
