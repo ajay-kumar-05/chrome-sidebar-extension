@@ -63,6 +63,9 @@ export const en = {
   errNetwork: "⚠️ Couldn't reach the AI endpoint. Check your base URL and connection.",
   errGeneric: '⚠️ Something went wrong. Verify your API key, base URL, and model in Settings.',
   errNoSelection: 'No text is selected. Highlight some page text first, then retry.',
+  cmdPlaceholder: 'Type a command or search…',
+  cmdEmpty: 'No matching commands',
+  cmdToggleTheme: 'Toggle light / dark',
 };
 
 export type TranslationKey = keyof typeof en;

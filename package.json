@@ -14,11 +14,16 @@
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.42.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
+    "three": "^0.185.0",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
@@ -28,6 +33,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.184.1",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.19",
     "eslint": "^9.17.0",

@@ -64,4 +64,7 @@ export const es: Dict = {
   errNetwork: '⚠️ No se pudo conectar con el endpoint de IA. Comprueba tu URL base y la conexión.',
   errGeneric: '⚠️ Algo salió mal. Verifica tu clave API, URL base y modelo en Ajustes.',
   errNoSelection: 'No hay texto seleccionado. Selecciona algo de texto primero e inténtalo de nuevo.',
+  cmdPlaceholder: 'Escribe un comando o busca…',
+  cmdEmpty: 'No hay comandos coincidentes',
+  cmdToggleTheme: 'Alternar claro / oscuro',
 };

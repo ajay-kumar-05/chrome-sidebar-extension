@@ -7,10 +7,12 @@ import type { Message } from '@/lib/types';
 
 interface Props {
   message: Message;
+  /** True while this assistant message is actively being streamed into. */
+  streaming?: boolean;
 }
 
 /** A single chat row (user or assistant). */
-export default function MessageBubble({ message }: Props) {
+export default function MessageBubble({ message, streaming }: Props) {
   const t = useT();
   const name = useSettings((s) => s.name);
   const isUser = message.role === 'user';
@@ -34,7 +36,10 @@ export default function MessageBubble({ message }: Props) {
           {isUser ? (
             message.content && <span>{message.content}</span>
           ) : (
-            <Markdown>{message.content}</Markdown>
+            <>
+              <Markdown>{message.content}</Markdown>
+              {streaming && <span className="stream-caret" aria-hidden />}
+            </>
           )}
         </div>
       </div>

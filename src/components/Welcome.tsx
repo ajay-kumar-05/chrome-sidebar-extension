@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import clsx from 'clsx';
 import { ChevronIcon, DocIcon, GlobeIcon, SparkleIcon } from './icons';
 import { useT } from '@/hooks/useT';
+
+const AiOrb = lazy(() => import('./AiOrb'));
 import { TRANSLATE_LANGS } from '@/lib/languages';
 import type { QuickAction } from '@/lib/types';
 
@@ -16,9 +18,9 @@ export default function Welcome({ onAction }: Props) {
 
   return (
     <div className="welcome">
-      <div className="welcome-icon">
-        <SparkleIcon />
-      </div>
+      <Suspense fallback={<div className="welcome-orb orb-fallback" />}>
+        <AiOrb className="welcome-orb" />
+      </Suspense>
       <div className="welcome-title">{t('welcomeTitle')}</div>
       <div className="welcome-text">{t('welcomeText')}</div>
 

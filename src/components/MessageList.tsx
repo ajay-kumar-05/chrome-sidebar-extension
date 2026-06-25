@@ -24,6 +24,9 @@ export default function MessageList({ onAction }: Props) {
   const visible = messages.filter((m) => !(m.role === 'assistant' && m.content === ''));
   const last = messages[messages.length - 1];
   const awaitingFirstToken = isLoading && last?.role === 'assistant' && last.content === '';
+  // The last assistant message is "streaming" once it has content while loading.
+  const streamingId =
+    isLoading && last?.role === 'assistant' && last.content !== '' ? last.id : null;
   const empty = visible.length === 0 && !isLoading;
 
   return (
@@ -33,7 +36,7 @@ export default function MessageList({ onAction }: Props) {
       ) : (
         <>
           {visible.map((m) => (
-            <MessageBubble key={m.id} message={m} />
+            <MessageBubble key={m.id} message={m} streaming={m.id === streamingId} />
           ))}
           {awaitingFirstToken && <TypingIndicator />}
         </>

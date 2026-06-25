@@ -67,4 +67,7 @@ export const fr: Dict = {
   errGeneric:
     '⚠️ Une erreur est survenue. Vérifiez votre clé API, votre URL de base et votre modèle dans les Paramètres.',
   errNoSelection: "Aucun texte sélectionné. Sélectionnez d'abord du texte, puis réessayez.",
+  cmdPlaceholder: 'Tapez une commande ou recherchez…',
+  cmdEmpty: 'Aucune commande correspondante',
+  cmdToggleTheme: 'Basculer clair / sombre',
 };
