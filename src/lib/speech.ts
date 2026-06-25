@@ -21,6 +21,9 @@ interface RecognitionEvent {
   resultIndex: number;
   results: ArrayLike<RecognitionResult>;
 }
+interface RecognitionErrorEvent {
+  error: string;
+}
 export interface SpeechRecognitionLike {
   lang: string;
   interimResults: boolean;
@@ -29,7 +32,7 @@ export interface SpeechRecognitionLike {
   stop(): void;
   onresult: ((e: RecognitionEvent) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((e: RecognitionErrorEvent) => void) | null;
 }
 type RecognitionCtor = new () => SpeechRecognitionLike;
 
@@ -40,6 +43,34 @@ export function getRecognitionCtor(): RecognitionCtor | null {
     webkitSpeechRecognition?: RecognitionCtor;
   };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+/**
+ * Request microphone access. In extension pages (like the side panel) the
+ * SpeechRecognition API does not prompt for the mic on its own and fails with
+ * a "not-allowed" error, so we ask for it explicitly first. The granted
+ * permission persists for the origin, so the prompt only appears once.
+ */
+export async function ensureMicAccess(): Promise<boolean> {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Open the standalone permission page in a tab. Side panels often can't show
+ * the mic prompt, but a normal tab can; the granted permission then applies to
+ * the whole extension origin (including the side panel).
+ */
+export function openMicPermissionPage(): void {
+  const ext = (globalThis as { chrome?: typeof chrome }).chrome;
+  if (ext?.tabs?.create && ext.runtime?.getURL) {
+    void ext.tabs.create({ url: ext.runtime.getURL('request-mic.html') });
+  }
 }
 
 /** Join the final transcript text out of a recognition event. */

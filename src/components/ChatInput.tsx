@@ -17,7 +17,7 @@ import { useDialog } from './Dialog';
 import Modal from './Modal';
 import { captureRegion, isExtension } from '@/lib/messaging';
 import { matchSlash, expandSlash } from '@/lib/prompts';
-import { getRecognitionCtor, transcriptOf, SPEECH_LANG, type SpeechRecognitionLike } from '@/lib/speech';
+import { getRecognitionCtor, ensureMicAccess, openMicPermissionPage, transcriptOf, SPEECH_LANG, type SpeechRecognitionLike } from '@/lib/speech';
 
 interface Props {
   onSend: (text: string, images?: string[]) => void;
@@ -148,13 +148,23 @@ export default function ChatInput({ onSend, onStop }: Props) {
     });
   };
 
-  const toggleMic = () => {
+  const toggleMic = async () => {
     if (listening) {
       recognitionRef.current?.stop();
       return;
     }
     const Ctor = getRecognitionCtor();
-    if (!Ctor) return;
+    if (!Ctor) {
+      await dialog.alert({ title: t('dictate'), message: t('micUnsupported'), tone: 'warning' });
+      return;
+    }
+    // Extension pages don't auto-prompt for the mic, so request it explicitly.
+    const granted = await ensureMicAccess();
+    if (!granted) {
+      openMicPermissionPage();
+      await dialog.alert({ title: t('dictate'), message: t('micDenied'), tone: 'warning' });
+      return;
+    }
     const recognition = new Ctor();
     recognition.lang = SPEECH_LANG[lang];
     recognition.interimResults = true;
@@ -166,7 +176,13 @@ export default function ChatInput({ onSend, onStop }: Props) {
       recognitionRef.current = null;
       requestAnimationFrame(autoGrow);
     };
-    recognition.onerror = () => recognition.stop();
+    recognition.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        openMicPermissionPage();
+        void dialog.alert({ title: t('dictate'), message: t('micDenied'), tone: 'warning' });
+      }
+      recognition.stop();
+    };
     recognitionRef.current = recognition;
     setListening(true);
     recognition.start();
@@ -339,7 +355,7 @@ export default function ChatInput({ onSend, onStop }: Props) {
         {speechSupported && (
           <button
             className={`mic-btn${listening ? ' listening' : ''}`}
-            onClick={toggleMic}
+            onClick={() => void toggleMic()}
             disabled={isLoading}
             title={t('dictate')}
             aria-label={t('dictate')}

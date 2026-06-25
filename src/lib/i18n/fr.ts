@@ -92,4 +92,6 @@ export const fr: Dict = {
   captureInfoTitle: "Capture d'écran",
   captureInfoDesc: "Cliquez et faites glisser sur l'onglet actif pour capturer une capture d'écran.",
   captureUnavailableTitle: 'Capture indisponible',
+  micDenied: "L'accès au microphone est bloqué. Nous avons ouvert un onglet où vous pouvez l'autoriser, puis revenez et appuyez de nouveau sur le micro.",
+  micUnsupported: "La saisie vocale n'est pas prise en charge par ce navigateur.",
 };

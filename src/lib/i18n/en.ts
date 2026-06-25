@@ -88,6 +88,8 @@ export const en = {
   captureInfoTitle: 'Screenshot capture',
   captureInfoDesc: 'Click and drag on the active tab to capture a screenshot.',
   captureUnavailableTitle: 'Capture unavailable',
+  micDenied: 'Microphone access is blocked. We opened a tab where you can allow it — then come back and tap the mic again.',
+  micUnsupported: 'Voice input isn’t supported in this browser.',
 };
 
 export type TranslationKey = keyof typeof en;

@@ -89,4 +89,6 @@ export const es: Dict = {
   captureInfoTitle: 'Captura de pantalla',
   captureInfoDesc: 'Haz clic y arrastra en la pestaña activa para capturar una captura de pantalla.',
   captureUnavailableTitle: 'Captura no disponible',
+  micDenied: 'El acceso al micrófono está bloqueado. Abrimos una pestaña donde puedes permitirlo; luego vuelve y toca el micrófono de nuevo.',
+  micUnsupported: 'La entrada de voz no es compatible con este navegador.',
 };
