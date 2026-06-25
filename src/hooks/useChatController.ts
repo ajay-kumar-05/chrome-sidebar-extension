@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useChat, activeMessages } from '@/store/chat';
 import { useSettings } from '@/store/settings';
 import { buildActionPrompt, sendChat } from '@/lib/ai';
+import { runAgent } from '@/lib/agent';
 import { applyInlineEdit, fetchLatestSelection, fetchPageContent } from '@/lib/messaging';
 import { retrieve } from '@/lib/rag';
 import { t } from '@/lib/i18n';
@@ -87,6 +88,49 @@ export function useChatController() {
   /** Cancel the in-flight request, if any. */
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
+  /** Run an agentic turn: the model uses browser/web tools to answer. */
+  const runAgentTurn = useCallback(async () => {
+    const { apiKey, baseUrl, model, lang } = useSettings.getState();
+    const history = activeMessages(useChat.getState());
+    const id = addMessage({ role: 'assistant', content: '' });
+    setLoading(true);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    // Agentic turns can take several tool round-trips; allow more time.
+    const signal = AbortSignal.any([
+      controller.signal,
+      AbortSignal.timeout(REQUEST_TIMEOUT_MS * 3),
+    ]);
+
+    const steps: string[] = [];
+    try {
+      const final = await runAgent({
+        apiKey,
+        baseUrl,
+        model,
+        lang,
+        history,
+        signal,
+        onEvent: (e) => {
+          steps.push(`\`🔧 ${e.name}\``);
+          updateMessage(id, steps.join(' · '));
+        },
+      });
+      updateMessage(id, final || '…');
+    } catch (error) {
+      if (isAbortError(error)) {
+        if (controller.signal.aborted) removeMessage(id);
+        else updateMessage(id, t(lang, 'errNetwork'));
+      } else {
+        updateMessage(id, messageForError(error, lang));
+      }
+    } finally {
+      abortRef.current = null;
+      setLoading(false);
+    }
+  }, [addMessage, updateMessage, removeMessage, setLoading]);
+
   /** Rewrite / fix a page selection and send the result back to replace it. */
   const runInlineEdit = useCallback(
     async (mode: InlineEditMode, text: string) => {
@@ -140,10 +184,12 @@ export function useChatController() {
       const content = text.trim();
       if ((!content && !images?.length) || useChat.getState().isLoading) return;
       addMessage({ role: 'user', content, images });
-      if (useChat.getState().pageGrounding && content) void runGrounded(content);
+      const state = useChat.getState();
+      if (state.agentMode && content) void runAgentTurn();
+      else if (state.pageGrounding && content) void runGrounded(content);
       else void runAI();
     },
-    [addMessage, runAI, runGrounded],
+    [addMessage, runAI, runGrounded, runAgentTurn],
   );
 
   /** Summarize the active browser tab's content. */

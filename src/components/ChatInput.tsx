@@ -8,6 +8,7 @@ import {
   PaperclipIcon,
   MicIcon,
   DocIcon,
+  SparkleIcon,
 } from './icons';
 import { useChat } from '@/store/chat';
 import { useSettings } from '@/store/settings';
@@ -41,6 +42,8 @@ export default function ChatInput({ onSend, onStop }: Props) {
   const isLoading = useChat((s) => s.isLoading);
   const pageGrounding = useChat((s) => s.pageGrounding);
   const setPageGrounding = useChat((s) => s.setPageGrounding);
+  const agentMode = useChat((s) => s.agentMode);
+  const setAgentMode = useChat((s) => s.setAgentMode);
   const lang = useSettings((s) => s.lang);
   const [value, setValue] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -207,15 +210,34 @@ export default function ChatInput({ onSend, onStop }: Props) {
   return (
     <div className="input-section">
       {isExtension() && (
-        <button
-          className={`page-toggle${pageGrounding ? ' on' : ''}`}
-          onClick={() => setPageGrounding(!pageGrounding)}
-          title={t('pageChat')}
-          aria-pressed={pageGrounding}
-        >
-          <DocIcon />
-          {t('pageChat')}
-        </button>
+        <div className="mode-row">
+          <button
+            className={`page-toggle${pageGrounding ? ' on' : ''}`}
+            onClick={() => {
+              const next = !pageGrounding;
+              setPageGrounding(next);
+              if (next) setAgentMode(false);
+            }}
+            title={t('pageChat')}
+            aria-pressed={pageGrounding}
+          >
+            <DocIcon />
+            {t('pageChat')}
+          </button>
+          <button
+            className={`page-toggle${agentMode ? ' on' : ''}`}
+            onClick={() => {
+              const next = !agentMode;
+              setAgentMode(next);
+              if (next) setPageGrounding(false);
+            }}
+            title={t('agentMode')}
+            aria-pressed={agentMode}
+          >
+            <SparkleIcon />
+            {t('agentMode')}
+          </button>
+        </div>
       )}
 
       {images.length > 0 && (

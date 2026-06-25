@@ -76,6 +76,7 @@ export const en = {
   listen: 'Read aloud',
   stopListen: 'Stop reading',
   pageChat: 'Chat with page',
+  agentMode: 'Agent',
 };
 
 export type TranslationKey = keyof typeof en;

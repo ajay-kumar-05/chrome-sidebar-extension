@@ -1683,12 +1683,16 @@ button {
   color: var(--brand-1);
 }
 
-/* ---- Page-grounding (chat with page) toggle ---- */
+/* ---- Mode toggles (chat with page / agent) ---- */
+.mode-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
 .page-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 10px;
   padding: 6px 11px;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
