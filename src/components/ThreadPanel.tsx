@@ -1,6 +1,7 @@
 import { PlusIcon, TrashIcon } from './icons';
 import { useChat } from '@/store/chat';
 import { useT } from '@/hooks/useT';
+import { useDialog } from './Dialog';
 
 interface Props {
   onClose: () => void;
@@ -9,6 +10,7 @@ interface Props {
 /** Conversation switcher: list, select, delete and start new chats. */
 export default function ThreadPanel({ onClose }: Props) {
   const t = useT();
+  const dialog = useDialog();
   const conversations = useChat((s) => s.conversations);
   const activeId = useChat((s) => s.activeId);
   const switchConversation = useChat((s) => s.switchConversation);
@@ -17,6 +19,20 @@ export default function ThreadPanel({ onClose }: Props) {
 
   // Most recently updated first.
   const ordered = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
+  // A chat only counts as a "record" once it has messages, so an empty
+  // active/new chat never shows up on its own as something to delete.
+  const hasRecords = conversations.some((c) => c.messages.length > 0);
+
+  const onDelete = async (id: string) => {
+    const ok = await dialog.confirm({
+      title: t('deleteChatTitle'),
+      message: t('deleteChatConfirm'),
+      confirmLabel: t('delete'),
+      cancelLabel: t('cancel'),
+      tone: 'danger',
+    });
+    if (ok) deleteConversation(id);
+  };
 
   return (
     <div
@@ -41,28 +57,36 @@ export default function ThreadPanel({ onClose }: Props) {
         </div>
 
         <div className="thread-list">
-          {ordered.map((c) => (
-            <div
-              key={c.id}
-              className={`thread-item${c.id === activeId ? ' active' : ''}`}
-              onClick={() => {
-                switchConversation(c.id);
-                onClose();
-              }}
-            >
-              <span className="thread-title">{c.title || t('untitled')}</span>
-              <button
-                className="thread-del"
-                title={t('deleteChatConfirm')}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm(t('deleteChatConfirm'))) deleteConversation(c.id);
-                }}
-              >
-                <TrashIcon />
-              </button>
-            </div>
-          ))}
+          {!hasRecords ? (
+            <div className="thread-empty">{t('noRecords')}</div>
+          ) : (
+            ordered.map((c) => {
+              const isActiveEmpty = c.id === activeId && c.messages.length === 0;
+              return (
+                <div
+                  key={c.id}
+                  className={`thread-item${c.id === activeId ? ' active' : ''}`}
+                  onClick={() => {
+                    switchConversation(c.id);
+                    onClose();
+                  }}
+                >
+                  <span className="thread-title">{c.title || t('untitled')}</span>
+                  <button
+                    className="thread-del"
+                    title={t('deleteChatTitle')}
+                    disabled={isActiveEmpty}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void onDelete(c.id);
+                    }}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

@@ -132,6 +132,10 @@ function handleTextSelection(e: Event): void {
     chrome.runtime.sendMessage({ action: 'setSelectedText', text } satisfies RuntimeMessage);
     if (isConfigured && selection) showSelectionPopup(selection);
   } else if (!text) {
+    // Tell the panel the selection went away so selection-only actions hide.
+    if (selectedText) {
+      chrome.runtime.sendMessage({ action: 'setSelectedText', text: '' } satisfies RuntimeMessage);
+    }
     selectedText = '';
     currentEditable = null;
     hideSelectionPopup();

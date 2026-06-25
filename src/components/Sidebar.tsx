@@ -37,7 +37,7 @@ export default function Sidebar({ onSend, onStop, onAction }: Props) {
   }, []);
 
   return (
-    <div className="container">
+    <div className="container-wrapper">
       <Header
         onAvatarClick={() => setMenuOpen(true)}
         onNewChat={() => newConversation()}

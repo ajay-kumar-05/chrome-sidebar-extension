@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CloseIcon } from './icons';
 import { useSettings } from '@/store/settings';
 import { useT } from '@/hooks/useT';
+import { useDialog } from './Dialog';
 
 interface Props {
   onClose: () => void;
@@ -10,28 +11,37 @@ interface Props {
 /** Settings sheet: edit name / key / base URL / model, or reset the key. */
 export default function SettingsModal({ onClose }: Props) {
   const t = useT();
+  const dialog = useDialog();
   const { name, apiKey, baseUrl, model, update, resetApiKey } = useSettings();
   const [form, setForm] = useState({ name, apiKey, baseUrl, model });
 
   const set = (key: keyof typeof form) => (value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  const save = () => {
+  const save = async () => {
     const next = {
       name: form.name.trim(),
       apiKey: form.apiKey.trim(),
       baseUrl: form.baseUrl.trim().replace(/\/$/, ''),
       model: form.model.trim(),
     };
-    if (!next.apiKey) return alert(`${t('apiKey')} ?`);
-    if (!next.baseUrl) return alert(`${t('baseUrl')} ?`);
-    if (!next.model) return alert(`${t('model')} ?`);
+    if (!next.apiKey || !next.baseUrl || !next.model) {
+      await dialog.alert({ title: t('settings'), message: t('requiredFields'), tone: 'warning' });
+      return;
+    }
     update(next);
     onClose();
   };
 
-  const reset = () => {
-    if (confirm(t('resetConfirm'))) {
+  const reset = async () => {
+    const ok = await dialog.confirm({
+      title: t('resetKey'),
+      message: t('resetConfirm'),
+      confirmLabel: t('confirm'),
+      cancelLabel: t('cancel'),
+      tone: 'danger',
+    });
+    if (ok) {
       resetApiKey();
       onClose();
     }
@@ -93,10 +103,10 @@ export default function SettingsModal({ onClose }: Props) {
               onChange={(e) => set('model')(e.target.value)}
             />
           </div>
-          <button className="setup-btn" onClick={save}>
+          <button className="setup-btn" onClick={() => void save()}>
             {t('save')}
           </button>
-          <button className="setup-btn ghost" onClick={reset}>
+          <button className="setup-btn ghost" onClick={() => void reset()}>
             {t('resetKey')}
           </button>
         </div>

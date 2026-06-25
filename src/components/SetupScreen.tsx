@@ -2,36 +2,46 @@ import { useState, type KeyboardEvent } from 'react';
 import { KeyIcon } from './icons';
 import { useSettings } from '@/store/settings';
 import { useT } from '@/hooks/useT';
+import { useDialog } from './Dialog';
 
 const KEY_PATTERN = /^([a-z]{2,3}-)?[A-Za-z0-9-_]{10,}$/;
 
 /** First-run screen: collect API key, base URL, model and (optional) name. */
 export default function SetupScreen() {
   const t = useT();
+  const dialog = useDialog();
   const { baseUrl, model, name, update } = useSettings();
   const [form, setForm] = useState({ apiKey: '', baseUrl, model, name });
 
   const set = (key: keyof typeof form) => (value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  const save = () => {
+  const save = async () => {
     const next = {
       apiKey: form.apiKey.trim(),
       baseUrl: form.baseUrl.trim().replace(/\/$/, ''),
       model: form.model.trim(),
       name: form.name.trim(),
     };
-    if (!next.apiKey) return alert('Please enter an API key');
-    if (!next.baseUrl) return alert('Please enter a Base URL');
-    if (!next.model) return alert('Please enter a Model ID');
-    if (!KEY_PATTERN.test(next.apiKey) && !confirm('The API key format looks unusual. Save anyway?')) {
+    if (!next.apiKey || !next.baseUrl || !next.model) {
+      await dialog.alert({ title: t('setupTitle'), message: t('requiredFields'), tone: 'warning' });
       return;
+    }
+    if (!KEY_PATTERN.test(next.apiKey)) {
+      const ok = await dialog.confirm({
+        title: t('setupTitle'),
+        message: t('keyFormatConfirm'),
+        confirmLabel: t('confirm'),
+        cancelLabel: t('cancel'),
+        tone: 'warning',
+      });
+      if (!ok) return;
     }
     update(next);
   };
 
   const onEnter = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') save();
+    if (e.key === 'Enter') void save();
   };
 
   return (
@@ -90,7 +100,7 @@ export default function SetupScreen() {
             />
           </div>
 
-          <button className="setup-btn" onClick={save}>
+          <button className="setup-btn" onClick={() => void save()}>
             {t('setupSave')}
           </button>
           <div className="setup-note">{t('setupNote')}</div>

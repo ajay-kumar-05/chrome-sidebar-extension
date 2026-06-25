@@ -3,6 +3,7 @@ import { ChevronIcon, MoonIcon, SettingsIcon, SunIcon, TrashIcon } from './icons
 import { useSettings } from '@/store/settings';
 import { useChat } from '@/store/chat';
 import { useT } from '@/hooks/useT';
+import { useDialog } from './Dialog';
 import { initials } from '@/lib/format';
 import { LANGS } from '@/lib/i18n';
 
@@ -14,11 +15,19 @@ interface Props {
 /** Avatar popover: profile, theme, language, settings and clear-chat. */
 export default function UserMenu({ onClose, onOpenSettings }: Props) {
   const t = useT();
+  const dialog = useDialog();
   const { name, model, theme, lang, update } = useSettings();
   const clear = useChat((s) => s.clear);
 
-  const handleClear = () => {
-    if (confirm(t('clearConfirm'))) {
+  const handleClear = async () => {
+    const ok = await dialog.confirm({
+      title: t('menuClear'),
+      message: t('clearConfirm'),
+      confirmLabel: t('confirm'),
+      cancelLabel: t('cancel'),
+      tone: 'danger',
+    });
+    if (ok) {
       clear();
       onClose();
     }
@@ -90,7 +99,7 @@ export default function UserMenu({ onClose, onOpenSettings }: Props) {
               <ChevronIcon />
             </span>
           </button>
-          <button className="menu-item danger" onClick={handleClear}>
+          <button className="menu-item danger" onClick={() => void handleClear()}>
             <TrashIcon />
             <span className="menu-item-text">{t('menuClear')}</span>
           </button>

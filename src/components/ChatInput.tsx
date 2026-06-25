@@ -13,6 +13,8 @@ import {
 import { useChat } from '@/store/chat';
 import { useSettings } from '@/store/settings';
 import { useT } from '@/hooks/useT';
+import { useDialog } from './Dialog';
+import Modal from './Modal';
 import { captureRegion, isExtension } from '@/lib/messaging';
 import { matchSlash, expandSlash } from '@/lib/prompts';
 import { getRecognitionCtor, transcriptOf, SPEECH_LANG, type SpeechRecognitionLike } from '@/lib/speech';
@@ -39,6 +41,7 @@ function fileToDataUrl(file: File): Promise<string> {
 /** Auto-growing message composer. Enter sends, Shift+Enter inserts a newline. */
 export default function ChatInput({ onSend, onStop }: Props) {
   const t = useT();
+  const dialog = useDialog();
   const isLoading = useChat((s) => s.isLoading);
   const pageGrounding = useChat((s) => s.pageGrounding);
   const setPageGrounding = useChat((s) => s.setPageGrounding);
@@ -123,7 +126,12 @@ export default function ChatInput({ onSend, onStop }: Props) {
     try {
       const res = await captureRegion();
       if (res.image) addImages([res.image]);
-      else if (res.unavailable) alert(t('captureUnavailable'));
+      else if (res.unavailable)
+        await dialog.alert({
+          title: t('captureUnavailableTitle'),
+          message: t('captureUnavailable'),
+          tone: 'warning',
+        });
     } finally {
       setCapturing(false);
     }
@@ -208,9 +216,11 @@ export default function ChatInput({ onSend, onStop }: Props) {
   const atLimit = images.length >= MAX_IMAGES;
 
   return (
-    <div className="input-section">
-      {isExtension() && (
-        <div className="mode-row">
+    <>
+      <div className="input-section">
+      <div className="input-inner">
+        {isExtension() && (
+          <div className="mode-row">
           <button
             className={`page-toggle${pageGrounding ? ' on' : ''}`}
             onClick={() => {
@@ -354,6 +364,13 @@ export default function ChatInput({ onSend, onStop }: Props) {
         )}
       </div>
       <div className="input-hint">{t('hint')}</div>
+      </div>
     </div>
+      {capturing && (
+        <Modal title={t('captureInfoTitle')} tone="info" hideClose>
+          <p className="modal-message">{t('captureInfoDesc')}</p>
+        </Modal>
+      )}
+    </>
   );
 }

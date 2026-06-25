@@ -3,7 +3,7 @@ export const en = {
   appName: 'AI Assistant',
   tagline: 'Your browsing copilot',
   online: 'Online',
-  welcomeTitle: 'How can I help?',
+  welcomeTitle: 'How can I help you?',
   welcomeText: 'Ask anything, or use a quick action to work with the current page.',
   sugSummarizeT: 'Summarize this page',
   sugSummarizeD: 'Get the key points instantly',
@@ -77,6 +77,17 @@ export const en = {
   stopListen: 'Stop reading',
   pageChat: 'Chat with page',
   agentMode: 'Agent',
+  noRecords: 'No records found',
+  deleteChatTitle: 'Delete chat',
+  delete: 'Delete',
+  cancel: 'Cancel',
+  confirm: 'Confirm',
+  ok: 'OK',
+  requiredFields: 'Please fill in all required fields.',
+  keyFormatConfirm: 'The API key format looks unusual. Save anyway?',
+  captureInfoTitle: 'Screenshot capture',
+  captureInfoDesc: 'Click and drag on the active tab to capture a screenshot.',
+  captureUnavailableTitle: 'Capture unavailable',
 };
 
 export type TranslationKey = keyof typeof en;

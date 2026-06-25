@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import SetupScreen from '@/components/SetupScreen';
+import { DialogProvider } from '@/components/Dialog';
 import { useChatController } from '@/hooks/useChatController';
 import { useSettings } from '@/store/settings';
 import { useChat } from '@/store/chat';
-import { ensureActiveTabContext, onRuntimeMessage } from '@/lib/messaging';
+import { ensureActiveTabContext, fetchLatestSelection, onRuntimeMessage } from '@/lib/messaging';
 import { t } from '@/lib/i18n';
 
 export default function App() {
@@ -38,6 +39,8 @@ export default function App() {
           break;
         case 'pageChanged':
           setCurrentPage({ url: msg.pageUrl ?? '', title: msg.title ?? '' });
+          // A navigation drops any prior selection.
+          setSelectedText('');
           break;
         case 'inlineEdit':
           void runInlineEdit(msg.mode, msg.text);
@@ -51,12 +54,19 @@ export default function App() {
       refresh: t(lang, 'ctxRefresh'),
     });
 
+    // Seed any selection that already exists in the active tab on open.
+    void fetchLatestSelection().then(setSelectedText);
+
     return unsubscribe;
   }, [configured, handleAction, runInlineEdit, setSelectedText, setCurrentPage, lang]);
 
-  return configured ? (
-    <Sidebar onSend={send} onStop={stop} onAction={handleAction} />
-  ) : (
-    <SetupScreen />
+  return (
+    <DialogProvider>
+      {configured ? (
+        <Sidebar onSend={send} onStop={stop} onAction={handleAction} />
+      ) : (
+        <SetupScreen />
+      )}
+    </DialogProvider>
   );
 }
